@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package com.metrocarpool.events;
+
+//// Optionally define the Java package
+//option java_package = "com.metrocarpool.events";
+//option java_multiple_files = true;
+
+// The Kafka event definition
+message RiderCompletionAllUsersEvent {
+  int64 userId = 1;
+  string status = 2;
+}
