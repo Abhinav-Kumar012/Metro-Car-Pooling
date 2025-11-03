@@ -5,7 +5,7 @@ package com.metrocarpool.events;
 // Optionally define the Java package
 option java_multiple_files = true;
 option java_package = "com.metrocarpool.contracts.proto";
-option java_outer_classname = "DriverLocationEvent";
+option java_outer_classname = "DriverLocationEventMessage";
 
 // The Kafka event definition
 message DriverLocationEvent {

@@ -89,6 +89,11 @@
 			<artifactId>spring-security-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+        <dependency>
+            <groupId>com.metrocarpool</groupId>
+            <artifactId>contracts</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
 	</dependencies>
 	<dependencyManagement>
 		<dependencies>
@@ -99,11 +104,6 @@
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
-            <dependency>
-                <groupId>com.metrocarpool</groupId>
-                <artifactId>contracts</artifactId>
-                <version>0.0.1-SNAPSHOT</version>
-            </dependency>
 		</dependencies>
 	</dependencyManagement>
 
