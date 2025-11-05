@@ -1,0 +1,3 @@
+how are multiple DB instances load balanced and synchronised using Kubernetes
+if many clients hit the same API endpoint then how are the requests processed
+Make kafka codes for all microservices. Write code snippets for producing and consuming messages using kafka in each microservice.
