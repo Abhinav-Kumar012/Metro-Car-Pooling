@@ -13,7 +13,6 @@ import java.util.Map;
 @Slf4j
 @RequiredArgsConstructor
 public class DriverService {
-
     // ✅ Inject KafkaTemplate to publish events (assuming Spring Boot Kafka configured)
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
