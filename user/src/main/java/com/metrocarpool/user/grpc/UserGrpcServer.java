@@ -11,4 +11,6 @@ import org.springframework.grpc.server.service.GrpcService;
 public class UserGrpcServer extends UserServiceGrpc.UserServiceImplBase {
     @Autowired
     private UserService userService;
+
+
 }

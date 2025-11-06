@@ -7,5 +7,5 @@ import lombok.Builder;
 public class UserLoginDTO {
     private String username;
     private String password;
-    private UserType userType;
+//    private UserType userType;
 }

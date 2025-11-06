@@ -11,7 +11,8 @@ option java_outer_classname = "UserProto";
 service UserService {
   rpc DriverSignUpRequest (DriverSignUp) returns (SignUpOrLoginResponse);
   rpc RiderSignUpRequest (RiderSignUp) returns (SignUpOrLoginResponse);
-  rpc UserLoginRequest (UserLogin) returns (SignUpOrLoginResponse);
+  rpc DriverLoginRequest (DriverLogin) returns (SignUpOrLoginResponse);
+  rpc RiderLoginRequest(RiderLogin) returns (SignUpOrLoginResponse);
 }
 
 enum UserType {
@@ -24,20 +25,26 @@ message DriverSignUp {
   string password = 2;
 //  UserType userType = 3;
   int64 licenseId = 3;
-  google.protobuf.Timestamp createdAt = 4;
+//  google.protobuf.Timestamp createdAt = 4;
 }
 
 message RiderSignUp {
   string username = 1;
   string password = 2;
 //  UserType userType = 3;
-  google.protobuf.Timestamp createdAt = 3;
+//  google.protobuf.Timestamp createdAt = 3;
 }
 
-message UserLogin {
+message DriverLogin {
   string username = 1;
   string password = 2;
-  UserType userType = 3;
+//  UserType userType = 3;
+}
+
+message RiderLogin {
+  string username = 1;
+  string password = 2;
+//  UserType userType = 3;
 }
 
 message SignUpOrLoginResponse {
