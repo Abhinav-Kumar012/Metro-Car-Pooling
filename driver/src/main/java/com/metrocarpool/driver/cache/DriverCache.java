@@ -14,8 +14,11 @@ import java.util.List;
 @Builder
 public class DriverCache {
     private Integer availableSeats;
-    private List<String> routeStations;
-    private String nextStation;
-    private Duration timeToNextStation;
+    private List<String> routePlaces;
+    private String nextPlace;
+    private Duration timeToNextPlace;
+    private Double distanceToNextPlace;
     private String finalDestination;
+    // NEW: store last seen metro station id (empty string if none)
+    private String lastSeenMetroStation;
 }

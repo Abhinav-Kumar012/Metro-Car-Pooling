@@ -1,0 +1,10 @@
+1. Make a graph of all possible locations and use floyd warshall to find distances between all points.
+   {Source, Destination, Dist in units}
+   1.1 Metro station independent map. Metro station CANNOT be a location and vice-versa.
+2. Location to nearest metro station mapping.
+3. Driver's possible metro station is calculated from 2.
+4. Assume driver travels k units of distance in 1 unit time. Assume uniform speed for all drivers. Simulate everything using system timestamp. (use something like rider arrival time - driver arrival time < threshold. Driver arrival time is calculated as x/k units of dist. per unit time.)
+5. match on the priority of lowest threshold.
+6. Remove the {driver,rider} pair from the cache as soon as a match is found.
+
+* We have to decide when to use redis cache. 
