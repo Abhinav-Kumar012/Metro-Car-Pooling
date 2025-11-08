@@ -8,6 +8,7 @@ import com.metrocarpool.contracts.proto.RiderRideCompletion;
 import com.metrocarpool.trip.cache.TripCache;
 import com.google.protobuf.InvalidProtocolBufferException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -23,8 +24,10 @@ import java.util.Map;
 public class TripService {
 
     private final KafkaTemplate<String, byte[]> kafkaTemplate;
-    private static final String DRIVER_RIDE_COMPLETION_TOPIC = "driver-ride-completion";
-    private static final String RIDER_RIDE_COMPLETION_TOPIC = "rider-ride-completion";
+    @Value("${kafka.topics.driver-ride-completion}")
+    private String DRIVER_RIDE_COMPLETION_TOPIC = "driver-ride-completion";
+    @Value("${kafka.topics.rider-ride-completion}")
+    private String RIDER_RIDE_COMPLETION_TOPIC = "rider-ride-completion";
 
     private final RedisTemplate<String, Object> redisTemplate;
     private static final String TRIP_CACHE_KEY = "trip-cache";

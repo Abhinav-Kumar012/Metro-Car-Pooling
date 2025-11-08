@@ -3,6 +3,7 @@ package com.metrocarpool.rider.service;
 import com.metrocarpool.contracts.proto.RiderRequestDriverEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
@@ -16,8 +17,8 @@ import java.util.Map;
 public class RiderService {
     // ✅ Inject KafkaTemplate to publish events (assuming Spring Boot Kafka configured)
     private final KafkaTemplate<String, byte[]> kafkaTemplate;
-
-    private static final String RIDER_TOPIC = "rider-requests";
+    @Value("${kafka.topics.rider-requests}")
+    private String RIDER_TOPIC;
 
     /**
      * Process the driver info and publish it as an event to Kafka

@@ -9,6 +9,7 @@ import com.metrocarpool.matching.cache.MatchingDriverCache;
 import com.metrocarpool.matching.cache.RiderWaitingQueueCache;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -32,7 +33,8 @@ import java.util.ArrayList;
 public class MatchingService {
 
     private final KafkaTemplate<String, byte[]> kafkaTemplate;
-    private static final String MATCHING_TOPIC = "rider-driver-match";
+    @Value("${kafka.topics.rider-driver-match}")
+    private String MATCHING_TOPIC;
 
     private final RedisTemplate<String, Object> redisDriverTemplate;
     private static final String MATCHING_DRIVER_CACHE_KEY = "driver-cache";

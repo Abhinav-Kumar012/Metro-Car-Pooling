@@ -19,3 +19,6 @@ spring:
     redis:
       host: redis
       port: 6379
+kafka:
+  topics:
+    rider-driver-match: "rider-driver-match"
