@@ -64,4 +64,13 @@ public class NotificationGrpcClient {
         return createReactiveStream(stub.riderRideCompletionNotificationInitiationPost(request))
                 .share();
     }
+
+    public Flux<NotifyRiderDriverLocation>  getDriverLocationForRiderNotifications(boolean status) {
+        NotificationInitiation request = NotificationInitiation.newBuilder()
+                .setStatus(status)
+                .build();
+
+        return createReactiveStream(stub.driverLocationForRiderNotificationInitiationPost(request))
+                .share();
+    }
 }

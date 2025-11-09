@@ -40,4 +40,13 @@ public class NotificationGrpcServer extends NotificationServiceGrpc.Notification
                 .doOnError(responseObserver::onError)
                 .subscribe();
     }
+
+    @Override
+    public void driverLocationForRiderNotificationInitiationPost(NotificationInitiation request, StreamObserver<NotifyRiderDriverLocation> responseObserver) {
+        notificationService.streamNotifyRiderDriverLocations()
+                .doOnNext(responseObserver::onNext)
+                .doOnComplete(responseObserver::onCompleted)
+                .doOnError(responseObserver::onError)
+                .subscribe();
+    }
 }

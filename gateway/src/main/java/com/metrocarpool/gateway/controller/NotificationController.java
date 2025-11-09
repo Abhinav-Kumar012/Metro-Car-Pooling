@@ -42,4 +42,12 @@ public class NotificationController {
                 .doFinally(signal -> System.out.println("SSE connection closed: " + signal))
                 .delayElements(Duration.ofMillis(100));
     }
+
+    @GetMapping(value = "/driver-location-for-rider", produces = "text/event-stream")
+    public Flux<ServerSentEvent<NotifyRiderDriverLocation>> streamDriverLocationForRider(@RequestParam(defaultValue = "true")  boolean status) {
+        return notificationGrpcClient.getDriverLocationForRiderNotifications(status)
+                .map(event -> ServerSentEvent.builder(event).build())
+                .doFinally(signal -> System.out.println("SSE connection closed: " + signal))
+                .delayElements(Duration.ofMillis(100));
+    }
 }
