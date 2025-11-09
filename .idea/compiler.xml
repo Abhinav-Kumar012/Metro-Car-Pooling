@@ -7,6 +7,7 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="contracts" />
+        <module name="registry" />
       </profile>
       <profile name="Annotation profile for metrocarpool" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
@@ -24,9 +25,6 @@
         <module name="matching" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="registry" target="21" />
-    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
