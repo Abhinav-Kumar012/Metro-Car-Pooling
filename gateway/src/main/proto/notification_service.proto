@@ -14,6 +14,8 @@ service NotificationService {
       returns (stream DriverRideCompletion);
   rpc RiderRideCompletionNotificationInitiationPost (NotificationInitiation)
       returns (stream RiderRideCompletion);
+  rpc DriverLocationForRiderNotificationInitiationPost (NotificationInitiation)
+      returns (stream NotifyRiderDriverLocation);
 }
 
 message RiderDriverMatch {
@@ -34,4 +36,12 @@ message DriverRideCompletion {
 message RiderRideCompletion {
   int64 riderId = 1;
   string completionMessage = 2;
+}
+
+message NotifyRiderDriverLocation {
+  int64 driverId = 1;
+  //  string oldStation = 2;
+  string nextStation = 2;
+  int32 timeToNextStation = 3;
+  int64 riderId = 4;
 }

@@ -31,4 +31,9 @@ public class KafkaConfig {
         return TopicBuilder.name(topicName).partitions(1).replicas(1).build();
     }
 
+    @Bean
+    public NewTopic driverLocationForRiderTopic(@Value("${kafka.topics.driver-location-rider}") String topicName) {
+        return TopicBuilder.name(topicName).partitions(1).replicas(1).build();
+    }
+
 }

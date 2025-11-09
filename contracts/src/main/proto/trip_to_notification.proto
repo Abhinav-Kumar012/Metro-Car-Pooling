@@ -28,3 +28,11 @@ message RiderRideCompletion {
   int64 riderId = 1;
   string eventMessage = 2;
 }
+
+message DriverLocationForRiderEvent {
+  int64 driverId = 1;
+  string oldStation = 2;
+  string nextStation = 3;
+  int32 timeToNextStation = 4;
+  int64 riderId = 5;
+}

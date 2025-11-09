@@ -1,10 +1,7 @@
 package com.metrocarpool.trip.service;
 
+import com.metrocarpool.contracts.proto.*;
 import lombok.extern.slf4j.Slf4j;
-import com.metrocarpool.contracts.proto.DriverRideCompletion;
-import com.metrocarpool.contracts.proto.DriverRideCompletionEvent;
-import com.metrocarpool.contracts.proto.DriverRiderMatchEvent;
-import com.metrocarpool.contracts.proto.RiderRideCompletion;
 import com.metrocarpool.trip.cache.TripCache;
 import com.google.protobuf.InvalidProtocolBufferException;
 import lombok.RequiredArgsConstructor;
@@ -25,9 +22,11 @@ public class TripService {
 
     private final KafkaTemplate<String, byte[]> kafkaTemplate;
     @Value("${kafka.topics.driver-ride-completion}")
-    private String DRIVER_RIDE_COMPLETION_TOPIC = "driver-ride-completion";
+    private String DRIVER_RIDE_COMPLETION_TOPIC;
     @Value("${kafka.topics.rider-ride-completion}")
-    private String RIDER_RIDE_COMPLETION_TOPIC = "rider-ride-completion";
+    private String RIDER_RIDE_COMPLETION_TOPIC;
+    @Value("${kafka.topics.driver-location-rider}")
+    private String DRIVER_LOCATION_RIDER;
 
     private final RedisTemplate<String, Object> redisTemplate;
     private static final String TRIP_CACHE_KEY = "trip-cache";
@@ -44,6 +43,7 @@ public class TripService {
 
             // Update the cache => push this pair {riderId, pickUpStation} in the list associated with key == driverId
             Map<Long, List<TripCache>> allTripCacheData = (Map<Long, List<TripCache>>) redisTemplate.opsForValue().get(TRIP_CACHE_KEY);
+            assert allTripCacheData != null;
             allTripCacheData.get(driverId).add(TripCache.builder()
                     .riderId(riderId)
                     .pickUpStation(pickUpStation)
@@ -103,6 +103,45 @@ public class TripService {
             redisTemplate.opsForValue().set(TRIP_CACHE_KEY, allTripCacheData);
         } catch (InvalidProtocolBufferException e) {
             log.error("❌ Failed to parse DriverRideCompletionEvent message: {}", e);
+        }
+    }
+
+    @KafkaListener(topics = "driver-updates", groupId = "trip-service")
+    public void driverLocationUpdates(byte[] message, Acknowledgment acknowledgment) {
+        try {
+            DriverLocationEvent driverLocationEvent = DriverLocationEvent.parseFrom(message);
+            long driverId = driverLocationEvent.getDriverId();
+            String oldStation = driverLocationEvent.getOldStation();
+            String nextStation = driverLocationEvent.getNextStation();
+            int timeToNextStation =  driverLocationEvent.getTimeToNextStation();
+            acknowledgment.acknowledge();
+
+            // Send driver location to all associated riders
+            Map<Long, List<TripCache>> allTripCacheData =
+                    (Map<Long, List<TripCache>>) redisTemplate.opsForValue().get(TRIP_CACHE_KEY);
+            if (allTripCacheData == null || !allTripCacheData.containsKey(driverId)) {
+                return;
+            }
+
+            List<TripCache> riderList = allTripCacheData.get(driverId);
+            if (riderList == null || riderList.isEmpty()) {
+                allTripCacheData.remove(driverId);
+            }
+
+            assert riderList != null;
+            for (TripCache riderTrip : riderList) {
+                kafkaTemplate.send(DRIVER_LOCATION_RIDER, DriverLocationForRiderEvent.newBuilder()
+                        .setDriverId(driverId)
+                        .setRiderId(riderTrip.getRiderId())
+                        .setTimeToNextStation(timeToNextStation)
+                        .setOldStation(oldStation)
+                        .setNextStation(nextStation)
+                        .build()
+                        .toByteArray()
+                );
+            }
+        } catch (InvalidProtocolBufferException e) {
+            throw new RuntimeException(e);
         }
     }
 }

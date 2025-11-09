@@ -1,9 +1,11 @@
 package com.metrocarpool.notification.service;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.metrocarpool.contracts.proto.DriverLocationForRiderEvent;
 import com.metrocarpool.contracts.proto.DriverRideCompletionEvent;
 import com.metrocarpool.contracts.proto.DriverRiderMatchEvent;
 import com.metrocarpool.notification.proto.DriverRideCompletion;
+import com.metrocarpool.notification.proto.NotifyRiderDriverLocation;
 import com.metrocarpool.notification.proto.RiderDriverMatch;
 import com.metrocarpool.notification.proto.RiderRideCompletion;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +21,7 @@ public class NotificationService {
     private final Sinks.Many<RiderDriverMatch> riderDriverSink = Sinks.many().multicast().onBackpressureBuffer();
     private final Sinks.Many<DriverRideCompletion> driverCompletionSink = Sinks.many().multicast().onBackpressureBuffer();
     private final Sinks.Many<RiderRideCompletion> riderCompletionSink = Sinks.many().multicast().onBackpressureBuffer();
+    private final Sinks.Many<NotifyRiderDriverLocation>  driverLocationForRiderSink = Sinks.many().multicast().onBackpressureBuffer();
     
     // 🧠 This will be called by your Kafka listener whenever a new match event arrives.
     @KafkaListener(topics = "rider-driver-match", groupId = "notification-service")
@@ -81,7 +84,7 @@ public class NotificationService {
     public void publishRiderRideCompletion(byte[] byteMessage, Acknowledgment ack) {
         try{
             RiderRideCompletion tempEvent = RiderRideCompletion.parseFrom(byteMessage);
-            Long riderId = tempEvent.getRiderId();
+            long riderId = tempEvent.getRiderId();
             String message = tempEvent.getCompletionMessage();
             RiderRideCompletion completion = RiderRideCompletion.newBuilder()
                     .setRiderId(riderId)
@@ -101,5 +104,28 @@ public class NotificationService {
     // 🔁 This will be called by the gRPC server to stream to clients.
     public Flux<RiderRideCompletion> streamRiderRideCompletions() {
         return riderCompletionSink.asFlux();
+    }
+
+    @KafkaListener(topics = "driver-location-rider", groupId = "notification-sevice")
+    public void publishDriverLocationForRiderEvent(byte[] byteMessage, Acknowledgment ack) {
+        try {
+            DriverLocationForRiderEvent driverLocationForRiderEvent = DriverLocationForRiderEvent.parseFrom(byteMessage);
+            // manually acknowledge the message
+            ack.acknowledge();
+
+            NotifyRiderDriverLocation notifyRiderDriverLocation = NotifyRiderDriverLocation.newBuilder()
+                    .setDriverId(driverLocationForRiderEvent.getDriverId())
+                    .setRiderId(driverLocationForRiderEvent.getRiderId())
+                    .setNextStation(driverLocationForRiderEvent.getNextStation())
+                    .setTimeToNextStation(driverLocationForRiderEvent.getTimeToNextStation())
+                    .build();
+            driverLocationForRiderSink.tryEmitNext(notifyRiderDriverLocation);
+        } catch (InvalidProtocolBufferException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Flux<NotifyRiderDriverLocation> streamNotifyRiderDriverLocations() {
+        return driverLocationForRiderSink.asFlux();
     }
 }
