@@ -19,6 +19,9 @@ spring:
     redis:
       host: redis # We have assumed that "redis" is a Docker container. We will need to use Docker volumes to make the cache persistent.
       port: 6379
+  grpc:
+    server:
+      port: 9090
 kafka:
   topics:
     rider-ride-completion: "rider-ride-completion"

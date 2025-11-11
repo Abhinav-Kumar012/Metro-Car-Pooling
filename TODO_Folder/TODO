@@ -1,7 +1,3 @@
 1) How are multiple DB instances load balanced and synchronised using Kubernetes
 2) If many clients hit the same API endpoint then how are the requests processed
-3) Make kafka codes for all microservices. Write code snippets for producing and consuming messages using
-kafka in each microservice => Partially done
-4) The notification service should also stream the location of the driver to the rider after matching => We need to
-build on the current system design to incorporate the same
 5) GRPC client server communication madhe host and port check karayacha aahe

@@ -15,6 +15,9 @@ spring:
         spring.json.use.type.headers: false
     listener:
       ack-mode: manual
+  grpc:
+    server:
+      port: 9090
 #  data:
 #    redis:
 #      host: redis

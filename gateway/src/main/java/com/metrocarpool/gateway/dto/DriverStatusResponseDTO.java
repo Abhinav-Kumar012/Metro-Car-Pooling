@@ -2,9 +2,8 @@ package com.metrocarpool.gateway.dto;
 
 import lombok.Builder;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.apache.kafka.common.protocol.types.Field;
+//import org.apache.kafka.common.protocol.types.Field;
 
 @Builder
 @Getter
