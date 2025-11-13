@@ -7,7 +7,8 @@ FROM maven:3.9.9-eclipse-temurin-21 AS builder
 WORKDIR /app
 
 # Copy the pom.xml and download dependencies (for caching)
-COPY pom.xml .
+COPY pom.xml ./
+# Optional: copy parent pom if multi-module project
 COPY ../pom.xml ../
 
 # Copy source code
@@ -28,8 +29,9 @@ WORKDIR /app
 ARG JAR_FILE=target/*.jar
 COPY --from=builder /app/${JAR_FILE} rider_service.jar
 
-# Expose app port (change for each service)
-EXPOSE 8080
+# ✅ Expose both HTTP (Spring Boot) and gRPC ports
+EXPOSE 8081
+EXPOSE 9093
 
-# Default command
+# Default startup command
 ENTRYPOINT ["java", "-jar", "rider_service.jar"]

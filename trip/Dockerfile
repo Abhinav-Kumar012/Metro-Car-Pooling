@@ -6,14 +6,14 @@ FROM maven:3.9.9-eclipse-temurin-21 AS builder
 # Set working directory
 WORKDIR /app
 
-# Copy the pom.xml and download dependencies (for caching)
-COPY pom.xml .
+# Copy pom files for dependency resolution (useful for multi-module builds)
+COPY pom.xml ./
 COPY ../pom.xml ../
 
 # Copy source code
 COPY src ./src
 
-# Package the application (skip tests for speed)
+# Build the JAR (skip tests for faster builds)
 RUN mvn clean package -DskipTests
 
 # ===========================
@@ -24,12 +24,13 @@ FROM eclipse-temurin:21-jre-jammy
 # Set working directory
 WORKDIR /app
 
-# Copy JAR from builder stage
+# Copy built JAR from builder stage
 ARG JAR_FILE=target/*.jar
 COPY --from=builder /app/${JAR_FILE} trip_service.jar
 
-# Expose app port (change for each service)
-EXPOSE 8080
+# ✅ Expose both HTTP and gRPC ports
+EXPOSE 8081
+EXPOSE 9094
 
-# Default command
+# Default command to run the service
 ENTRYPOINT ["java", "-jar", "trip_service.jar"]

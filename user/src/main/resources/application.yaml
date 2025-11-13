@@ -16,10 +16,20 @@ spring:
       hibernate:
         format_sql: true
 
+  grpc:
+    server:
+      port: 9090
+
 server:
   port: 8081
 
 eureka:
   client:
+    register-with-eureka: true          # ✅ Register this service with Eureka
+    fetch-registry: true                # ✅ Allow discovery of other services
     service-url:
       defaultZone: http://localhost:8761/eureka
+  instance:
+    prefer-ip-address: true             # ✅ Use IP instead of hostname
+    metadata-map:
+      grpc.port: 9095                   # ✅ Advertise gRPC port to Eureka

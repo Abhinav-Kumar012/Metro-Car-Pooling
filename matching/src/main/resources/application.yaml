@@ -22,12 +22,21 @@ spring:
   grpc:
     server:
       port: 9090
+
 kafka:
   topics:
     rider-driver-match: "rider-driver-match"
+
 server:
   port: 8081
+
 eureka:
   client:
+    register-with-eureka: true          # ✅ Register this matching service with Eureka
+    fetch-registry: true                # ✅ Enable discovery of other services
     service-url:
-      defaultzone: http://localhost:8761/eureka
+      defaultZone: http://localhost:8761/eureka
+  instance:
+    prefer-ip-address: true             # ✅ Use IP address for registration
+    metadata-map:
+      grpc.port: 9091                   # ✅ Advertise gRPC port for service discovery
