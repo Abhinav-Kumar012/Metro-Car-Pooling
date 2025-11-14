@@ -20,10 +20,17 @@
         <grpc.version>1.76.0</grpc.version>
         <protobuf-java.version>4.32.1</protobuf-java.version>
         <spring-grpc.version>0.12.0</spring-grpc.version>
+
+        <!-- Default - overridden by OS profiles -->
+        <protoc.classifier>osx-aarch_64</protoc.classifier>
     </properties>
 
-    <!-- OS-based protoc classifier -->
+    <!-- ===============================
+         OS-BASED PROFILES
+         =============================== -->
     <profiles>
+
+        <!-- Mac ARM -->
         <profile>
             <id>mac-arm</id>
             <activation>
@@ -34,6 +41,18 @@
             </properties>
         </profile>
 
+        <!-- Mac Intel -->
+        <profile>
+            <id>mac-intel</id>
+            <activation>
+                <os><family>mac</family><arch>x86_64</arch></os>
+            </activation>
+            <properties>
+                <protoc.classifier>osx-x86_64</protoc.classifier>
+            </properties>
+        </profile>
+
+        <!-- Linux x86_64 (Docker / Ubuntu / EC2 / etc.) -->
         <profile>
             <id>linux-x86</id>
             <activation>
@@ -43,9 +62,36 @@
                 <protoc.classifier>linux-x86_64</protoc.classifier>
             </properties>
         </profile>
+
+        <!-- Windows 64-bit -->
+        <profile>
+            <id>windows-x86</id>
+            <activation>
+                <os><family>windows</family><arch>amd64</arch></os>
+            </activation>
+            <properties>
+                <protoc.classifier>win64</protoc.classifier>
+            </properties>
+        </profile>
+
+        <!-- Windows ARM64 -->
+        <profile>
+            <id>windows-arm</id>
+            <activation>
+                <os><family>windows</family><arch>aarch64</arch></os>
+            </activation>
+            <properties>
+                <protoc.classifier>win64_aarch64</protoc.classifier>
+            </properties>
+        </profile>
+
     </profiles>
 
+    <!-- ===============================
+         DEPENDENCIES
+         =============================== -->
     <dependencies>
+
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-services</artifactId>
@@ -78,6 +124,7 @@
             <artifactId>spring-grpc-test</artifactId>
             <scope>test</scope>
         </dependency>
+
     </dependencies>
 
     <dependencyManagement>
@@ -92,10 +139,11 @@
         </dependencies>
     </dependencyManagement>
 
+    <!-- ===============================
+         PROTOBUF PLUGIN
+         =============================== -->
     <build>
         <plugins>
-
-            <!-- ✅ Single and correct plugin -->
             <plugin>
                 <groupId>io.github.ascopes</groupId>
                 <artifactId>protobuf-maven-plugin</artifactId>
@@ -128,8 +176,8 @@
                         <goals><goal>generate</goal></goals>
                     </execution>
                 </executions>
-            </plugin>
 
+            </plugin>
         </plugins>
     </build>
 
