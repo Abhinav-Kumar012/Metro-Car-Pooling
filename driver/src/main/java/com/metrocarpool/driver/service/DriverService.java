@@ -73,12 +73,11 @@ public class DriverService {
 
             // Safe reads (tolerant to plain JSON; avoids @class requirement)
             // Nearby map is not required for initial driver registration; read later during cron
-            Map<Long, Object> allDriverCacheData = (Map<Long, Object>) redisTemplate.opsForValue()
-                    .get(DRIVER_CACHE_KEY);
-            if (allDriverCacheData == null) {
-                log.error("⚠️ Driver cache not found in Redis. Initializing new cache.");
+            Object raw = redisTemplate.opsForValue().get(DRIVER_CACHE_KEY);
+            Map<Long, DriverCache> allDriverCacheData = normalizeDriverCache(raw);
+            if (allDriverCacheData.isEmpty()) {
+                log.warn("Driver cache not found or empty; initializing new cache.");
                 allDriverCacheData = new HashMap<>();
-                redisTemplate.opsForValue().set(DRIVER_CACHE_KEY, allDriverCacheData);
             }
             Map<String, Map<String, Double>> locationLocationMap = safeReadLocationMap();
             if (locationLocationMap == null || locationLocationMap.isEmpty()) {
@@ -119,14 +118,22 @@ public class DriverService {
             // Acknowledge that you have got the message
             acknowledgment.acknowledge();
             // Decrement the availableSeats by 1 for this driverId
-            Map<Long, Object> allDriverCacheData = (Map<Long, Object>) redisTemplate.opsForValue().get(DRIVER_CACHE_KEY);
-            DriverCache driverCache = (DriverCache) allDriverCacheData.get(driverId);
-            Integer currentAvailableSeats = driverCache.getAvailableSeats();
-            currentAvailableSeats = currentAvailableSeats - 1;
+            Object raw = redisTemplate.opsForValue().get(DRIVER_CACHE_KEY);
+            Map<Long, DriverCache> allDriverCacheData = normalizeDriverCache(raw);
+            DriverCache driverCache = allDriverCacheData.get(driverId);
+            if (driverCache == null) {
+                log.warn("Driver {} not found in cache during match update", driverId);
+                return;
+            }
+            Integer currentAvailableSeats = Optional.ofNullable(driverCache.getAvailableSeats()).orElse(0);
+            currentAvailableSeats = Math.max(0, currentAvailableSeats - 1);
+            driverCache.setAvailableSeats(currentAvailableSeats);
 
-            // If availableSeats == 0 => evict from cache
+            // If availableSeats == 0 => evict from cache, else write back
             if (currentAvailableSeats == 0) {
                 allDriverCacheData.remove(driverId);
+            } else {
+                allDriverCacheData.put(driverId, driverCache);
             }
             redisTemplate.opsForValue().set(DRIVER_CACHE_KEY, allDriverCacheData);
         }catch (InvalidProtocolBufferException e){
@@ -141,15 +148,14 @@ public class DriverService {
     @Scheduled(cron = "0 */2 * * * *")
     public void cronJobDriverLocationSimulation() {
         log.debug("cron tick - driver simulation starting");
-
-        // Read caches from Redis
+        log.info("CRON job ka tick-tick chal raha hai...");
+        // Read caches from Redis and normalize key/value types
         Object rawDrivers = redisTemplate.opsForValue().get(DRIVER_CACHE_KEY);
-        if (!(rawDrivers instanceof Map)) {
-            log.warn("Driver cache not found or not a Map. Key: {}", DRIVER_CACHE_KEY);
+        Map<Long, DriverCache> allDriverCacheData = normalizeDriverCache(rawDrivers);
+        if (allDriverCacheData.isEmpty()) {
+            log.warn("Driver cache empty or unreadable. Key: {}", DRIVER_CACHE_KEY);
             return;
         }
-        @SuppressWarnings("unchecked")
-        Map<Long, DriverCache> allDriverCacheData = (Map<Long, DriverCache>) rawDrivers;
 
         // Tolerant reads (no @class requirement)
         Map<String, Map<String, Double>> locationLocationMap = safeReadLocationMap();
@@ -563,5 +569,42 @@ public class DriverService {
         // convert to seconds: time = ceil(totalDistance / DISTANCE_PER_TICK * SECONDS_PER_TICK)
         long secs = (long) Math.ceil((totalDistance / DISTANCE_PER_TICK) * SECONDS_PER_TICK);
         return (int) secs;
+    }
+
+    // ---------- Normalization helpers ----------
+
+    /**
+     * Normalize the Redis 'drivers' value to a Map<Long, DriverCache> regardless of stored key/value shapes.
+     * Accepts keys as Long/Integer/String and values as DriverCache or Map (convertible to DriverCache).
+     */
+    private Map<Long, DriverCache> normalizeDriverCache(Object raw) {
+        Map<Long, DriverCache> out = new HashMap<>();
+        if (!(raw instanceof Map<?, ?> rawMap)) return out;
+        for (Map.Entry<?, ?> entry : rawMap.entrySet()) {
+            Long id = parseLongKey(entry.getKey());
+            if (id == null) continue;
+            Object val = entry.getValue();
+            DriverCache cache = null;
+            if (val instanceof DriverCache) {
+                cache = (DriverCache) val;
+            } else if (val instanceof Map) {
+                try {
+                    cache = objectMapper.convertValue(val, DriverCache.class);
+                } catch (IllegalArgumentException ex) {
+                    log.warn("Failed to convert driver cache for id {}: {}", id, ex.getMessage());
+                }
+            }
+            if (cache != null) out.put(id, cache);
+        }
+        return out;
+    }
+
+    private Long parseLongKey(Object key) {
+        if (key instanceof Long l) return l;
+        if (key instanceof Integer i) return i.longValue();
+        if (key instanceof String s) {
+            try { return Long.parseLong(s); } catch (NumberFormatException ignored) {}
+        }
+        return null;
     }
 }
