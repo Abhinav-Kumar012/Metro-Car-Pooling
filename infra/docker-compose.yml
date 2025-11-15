@@ -1,0 +1,89 @@
+version: "3.8"
+
+services:
+  # ------------------------------------------------------------
+  # POSTGRES (for user-service authentication)
+  # ------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_DB: metrocarpool
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d
+
+  # ------------------------------------------------------------
+  # REDIS (shared cache cluster for all services)
+  # ------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # ------------------------------------------------------------
+  # ZOOKEEPER
+  # ------------------------------------------------------------
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    ports:
+      - "2181:2181"
+
+  # ------------------------------------------------------------
+  # KAFKA BROKER
+  # ------------------------------------------------------------
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+  # ------------------------------------------------------------
+  # EUREKA REGISTRY (DISCOVERY SERVER)
+  # ------------------------------------------------------------
+  registry:
+    build:
+      context: ..
+      dockerfile: registry/Dockerfile
+    container_name: registry
+    ports:
+      - "8761:8761"
+
+  cache-loader:
+    image: python:3.10
+    container_name: cache-loader
+    depends_on:
+      - redis
+    working_dir: /app
+    volumes:
+      - ./csv_generation:/data
+      - ./redis_loader:/app
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    command: >
+      sh -c "pip install redis &&
+             python load_cache.py"
+
+volumes:
+  redis_data:
+  postgres_data:
