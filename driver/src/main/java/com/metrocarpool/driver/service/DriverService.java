@@ -136,8 +136,9 @@ public class DriverService {
 
             // If availableSeats == 0 => evict from cache, else write back
             if (currentAvailableSeats == 0) {
-                log.info("Driver = {}, has 0 available seats. Removing the corresponding entry from the cache.", driverCache);
-                allDriverCacheData.remove(driverId);
+                log.info("Driver = {}, has 0 available seats.", driverCache);
+//                allDriverCacheData.remove(driverId);
+                allDriverCacheData.put(driverId, driverCache);
             } else {
                 allDriverCacheData.put(driverId, driverCache);
             }
@@ -358,15 +359,16 @@ public class DriverService {
         int availableSeats = Optional.ofNullable(cache.getAvailableSeats()).orElse(0);
         String finalDestination = Optional.ofNullable(cache.getFinalDestination()).orElse("");
 
-        // emit Kafka event
-        DriverLocationEvent event = DriverLocationEvent.newBuilder()
-                .setDriverId(driverId)
-                .setOldStation(oldStationForEvent)
-                .setNextStation(nextStationForEvent)
-                .setTimeToNextStation(timeToNextStationSec)
-                .setAvailableSeats(availableSeats)
-                .setFinalDestination(finalDestination)
-                .build();
+        if (availableSeats > 0) {
+            // emit Kafka event
+            DriverLocationEvent event = DriverLocationEvent.newBuilder()
+                    .setDriverId(driverId)
+                    .setOldStation(oldStationForEvent)
+                    .setNextStation(nextStationForEvent)
+                    .setTimeToNextStation(timeToNextStationSec)
+                    .setAvailableSeats(availableSeats)
+                    .setFinalDestination(finalDestination)
+                    .build();
 
         // send with key driverId
         kafkaTemplate.send(DRIVER_TOPIC, String.valueOf(driverId), event.toByteArray());
