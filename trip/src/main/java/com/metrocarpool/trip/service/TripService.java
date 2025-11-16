@@ -35,6 +35,8 @@ public class TripService {
     public void matchFound(byte[] message, Acknowledgment acknowledgment) {
         // Acknowledge that the message has been received
         try{
+            log.info("Reached TripService.matchFound.");
+
             DriverRiderMatchEvent tempEvent = DriverRiderMatchEvent.parseFrom(message);
             Long driverId = tempEvent.getDriverId();
             Long riderId = tempEvent.getRiderId();
@@ -51,14 +53,15 @@ public class TripService {
             );
             redisTemplate.opsForValue().set(TRIP_CACHE_KEY, allTripCacheData);
         } catch (InvalidProtocolBufferException e){
-            log.error("❌ Failed to parse DriverRiderMatchEvent message: {}", e);
+            log.error("Failed to parse DriverRiderMatchEvent message: {}", e.getMessage());
         }
-
     }
 
     @KafkaListener(topics = "trip-completed", groupId = "trip-service")
     public void tripCompleted(byte[] message, Acknowledgment acknowledgment) {
         try {
+            log.info("Reached TripService.tripCompleted.");
+
             DriverRideCompletionEvent tempEvent = DriverRideCompletionEvent.parseFrom(message);
             Long driverId = tempEvent.getDriverId();
             // Acknowledge that the message has been received
@@ -102,13 +105,15 @@ public class TripService {
             allTripCacheData.remove(driverId);
             redisTemplate.opsForValue().set(TRIP_CACHE_KEY, allTripCacheData);
         } catch (InvalidProtocolBufferException e) {
-            log.error("❌ Failed to parse DriverRideCompletionEvent message: {}", e);
+            log.error("Failed to parse DriverRideCompletionEvent message: {}", e.getMessage());
         }
     }
 
     @KafkaListener(topics = "driver-updates", groupId = "trip-service")
     public void driverLocationUpdates(byte[] message, Acknowledgment acknowledgment) {
         try {
+            log.info("Reached TripService.driverLocationUpdates.");
+
             DriverLocationEvent driverLocationEvent = DriverLocationEvent.parseFrom(message);
             long driverId = driverLocationEvent.getDriverId();
             String oldStation = driverLocationEvent.getOldStation();
@@ -141,7 +146,7 @@ public class TripService {
                 );
             }
         } catch (InvalidProtocolBufferException e) {
-            throw new RuntimeException(e);
+            log.error("Failed to parse DriverLocationEvent message: {}", e.getMessage());
         }
     }
 }

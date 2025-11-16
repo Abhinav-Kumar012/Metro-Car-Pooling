@@ -50,6 +50,8 @@ public class MatchingService {
     @KafkaListener(topics = "driver-updates", groupId = "matching-service")
     public void driverInfoUpdateCache(byte[] message, Acknowledgment ack) {
         try{
+            log.info("Reached MatchingService.driverInfoUpdateCache.");
+
             DriverLocationEvent event = DriverLocationEvent.parseFrom(message);
             Long driverId = event.getDriverId();
             String oldStation = event.getOldStation();
@@ -68,9 +70,9 @@ public class MatchingService {
             }
 
             // Remove from old station
-            if (oldStation != null && !oldStation.isEmpty()) {
+            if (!oldStation.isEmpty()) {
                 HashMap<String, List<MatchingDriverCache>> matchingCache = allMatchingCache.get(oldStation);
-                if (matchingCache != null && finalDestination != null && !finalDestination.isEmpty()) {
+                if (matchingCache != null && !finalDestination.isEmpty()) {
                     List<MatchingDriverCache> matchingDriverCacheList = matchingCache.get(finalDestination);
                     if (matchingDriverCacheList != null) {
                         matchingDriverCacheList.removeIf(matchingDriverCache1 -> Objects.equals(matchingDriverCache1.getDriverId(), driverId));
@@ -87,7 +89,7 @@ public class MatchingService {
             }
 
             // Add in new station
-            if (nextStation != null && !nextStation.isEmpty() && finalDestination != null && !finalDestination.isEmpty()) {
+            if (!nextStation.isEmpty() && !finalDestination.isEmpty()) {
                 HashMap<String, List<MatchingDriverCache>> matchingCache1 = allMatchingCache.get(nextStation);
                 if (matchingCache1 == null) {
                     matchingCache1 = new HashMap<>();
@@ -107,20 +109,18 @@ public class MatchingService {
                 redisDriverTemplate.opsForValue().set(MATCHING_DRIVER_CACHE_KEY, allMatchingCache);
             }
         } catch (InvalidProtocolBufferException e) {
-            log.error("❌ Failed to parse DriverLocationEvent message: {}", e.getMessage());
+            log.error("Failed to parse DriverLocationEvent message: {}", e.getMessage());
         }
-        
-        
     }
 
     @KafkaListener(topics = "rider-requests", groupId = "matching-service")
     public void riderInfoDriverMatchingAlgorithm(byte[] message,
                                                  Acknowledgment acknowledgment) {
-
-
         try{
+            log.info("Reached MatchingService.riderInfoDriverMatchingAlgorithm.");
+
             RiderRequestDriverEvent tempEvent = RiderRequestDriverEvent.parseFrom(message);
-            Long riderId = tempEvent.getRiderId();
+            long riderId = tempEvent.getRiderId();
             String pickUpStation = tempEvent.getPickUpStation();
             com.google.protobuf.Timestamp arrivalTime = tempEvent.getArrivalTime();
             String destinationPlace = tempEvent.getDestinationPlace();
@@ -153,7 +153,7 @@ public class MatchingService {
             String chosenDriverStation = null;
             String chosenDriverDestination = null;
 
-            if (pickUpStation != null && !pickUpStation.isEmpty()) {
+            if (!pickUpStation.isEmpty()) {
                 HashMap<String, List<MatchingDriverCache>> stationMap = allMatchingCache.get(pickUpStation);
                 if (stationMap != null && !stationMap.isEmpty()) {
                     // iterate only over driver destination keys in M
@@ -221,6 +221,7 @@ public class MatchingService {
                                     .setPickUpStation(pickUpStation)
                                     .setDriverArrivalTime(driverArrivalTs)
                                     .build();
+
                             kafkaTemplate.send(MATCHING_TOPIC, event.toByteArray());
                             matched = true;
 
@@ -270,13 +271,15 @@ public class MatchingService {
             }
             
         }catch (InvalidProtocolBufferException e){
-            log.error("❌ Failed to parse RiderRequestDriverEvent protobuf message", e);
+            log.error("Failed to parse RiderRequestDriverEvent protobuf message", e);
         }
         
     }
 
     @Scheduled(cron = "* * * * * *")
     public void cronJobMatchingAlgorithm() {
+        log.info("Reached MatchingService.cronJobMatchingAlgorithm.");
+
         // Run this CRON job every second to check whether there is a driver for the riders in the waiting queue => pop the first element from the queue
         // Load caches from Redis
         HashMap<String, HashMap<String, List<MatchingDriverCache>>> allMatchingCache =

@@ -32,6 +32,8 @@ public class RiderService {
     public boolean processRiderInfo(Long riderId, String pickUpStation,
                                     String destinationPlace, com.google.protobuf.Timestamp arrivalTime) {
         try {
+            log.info("Reached RiderService.processRiderInfo.");
+
             // ✅ Construct the event payload
             RiderRequestDriverEvent riderRequestDriverEvent = RiderRequestDriverEvent.newBuilder()
                     .setRiderId(riderId)
@@ -42,10 +44,10 @@ public class RiderService {
 
             kafkaTemplate.send(RIDER_TOPIC, riderRequestDriverEvent.toByteArray());
 
-            log.info("🚗 Published rider event for ID {} to topic '{}': {}", riderId, RIDER_TOPIC, riderRequestDriverEvent);
+            log.info("Published rider event for ID {} to topic '{}': {}", riderId, RIDER_TOPIC, riderRequestDriverEvent);
             return true;
         } catch (Exception e) {
-            log.error("❌ Failed to process rider info for ID {}: {}", riderId, e.getMessage());
+            log.error("Failed to process rider info for ID {}: {}", riderId, e.getMessage());
             return false;
         }
     }
