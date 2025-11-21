@@ -8,11 +8,12 @@ import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.SignalType;
-
+import org.springframework.web.bind.annotation.*;
 import java.time.Duration;
 
 @RestController
 @RequestMapping("/api/notification")
+@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 @RequiredArgsConstructor
 @Slf4j
 public class NotificationController {
