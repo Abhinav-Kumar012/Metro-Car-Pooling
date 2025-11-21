@@ -91,8 +91,7 @@ export default function AuthPage() {
         method: 'POST',
         body: JSON.stringify(payload),
       })
-
-      const data = await response.json()
+        const data = await response.json()
 
       if (isLogin) {
         // Login flow - expects token in response
@@ -112,7 +111,7 @@ export default function AuthPage() {
         }
       } else {
         // Signup flow - expects STATUS_CODE
-        if (data.STATUS_CODE === 200) {
+        if (data.status_CODE === 200) {
           setSuccess('Account created successfully! Please login.')
           
           // Clear form and switch to login
@@ -127,7 +126,7 @@ export default function AuthPage() {
             setIsLogin(true)
             setSuccess('')
           }, 2000)
-        } else if (data.STATUS_CODE === 409) {
+        } else if (data.status_CODE === 409) {
           throw new Error('Username already exists')
         } else {
           throw new Error('Signup failed. Please try again.')
