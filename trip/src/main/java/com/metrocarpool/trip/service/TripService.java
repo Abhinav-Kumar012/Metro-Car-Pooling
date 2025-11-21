@@ -1,6 +1,7 @@
 package com.metrocarpool.trip.service;
 
 import com.metrocarpool.contracts.proto.*;
+import com.metrocarpool.trip.redislock.RedisDistributedLock;
 import lombok.extern.slf4j.Slf4j;
 import com.metrocarpool.trip.cache.TripCache;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -33,8 +34,40 @@ public class TripService {
     private final RedisTemplate<String, Object> redisTemplate;
     private static final String TRIP_CACHE_KEY = "trip-cache";
 
+    // Redis Distributed Lock
+    private final RedisDistributedLock redisDistributedLock;
+    private static final String redisTripLockKey = "lock:trip";
+
+    private String tryAcquireLockWithRetry(String lockKey) {
+        for (int attempt = 1; attempt <= 10; attempt++) {
+            String lockValue = redisDistributedLock.acquireLock(lockKey, 5000);
+            if (lockValue != null) {
+                return lockValue;  // success
+            }
+
+            log.warn("Lock not acquired for key {}. Attempt {}/{}. Retrying in {} ms...",
+                    lockKey, attempt, 10, (long) 200);
+
+            try {
+                Thread.sleep((long) 200);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return null;
+            }
+        }
+        return null; // all retries failed
+    }
+
     @KafkaListener(topics = "rider-driver-match", groupId = "trip-service")
     public void matchFound(byte[] message, Acknowledgment acknowledgment) {
+        // Try to acquire lock
+        String lockValue = tryAcquireLockWithRetry(redisTripLockKey);
+        if (lockValue == null) {
+            log.error("Unable to acquire lock with retry policy: {} lock key {} timeout milliseconds {} maximum retries {} back off milliseconds. " +
+                    "Returning void.", redisTripLockKey, 5000, 10, 200);
+            return;
+        }
+
         // Acknowledge that the message has been received
         try{
             log.info("Reached TripService.matchFound.");
@@ -59,11 +92,21 @@ public class TripService {
             redisTemplate.opsForValue().set(TRIP_CACHE_KEY, allTripCacheData);
         } catch (InvalidProtocolBufferException e){
             log.error("Failed to parse DriverRiderMatchEvent message: {}", e.getMessage());
+        } finally {
+            redisDistributedLock.releaseLock(redisTripLockKey, lockValue);
         }
     }
 
     @KafkaListener(topics = "trip-completed", groupId = "trip-service")
     public void tripCompleted(byte[] message, Acknowledgment acknowledgment) {
+        // Try to acquire lock
+        String lockValue = tryAcquireLockWithRetry(redisTripLockKey);
+        if (lockValue == null) {
+            log.error("Unable to acquire lock with retry policy: {} lock key {} timeout milliseconds {} maximum retries {} back off milliseconds. " +
+                    "Returning void.", redisTripLockKey, 5000, 10, 200);
+            return;
+        }
+
         try {
             log.info("Reached TripService.tripCompleted.");
 
@@ -133,11 +176,21 @@ public class TripService {
             redisTemplate.opsForValue().set(TRIP_CACHE_KEY, allTripCacheData);
         } catch (InvalidProtocolBufferException e) {
             log.error("Failed to parse DriverRideCompletionEvent message: {}", e.getMessage());
+        } finally {
+            redisDistributedLock.releaseLock(redisTripLockKey, lockValue);
         }
     }
 
     @KafkaListener(topics = "driver-updates", groupId = "trip-service")
     public void driverLocationUpdates(byte[] message, Acknowledgment acknowledgment) {
+        // Try to acquire lock
+        String lockValue = tryAcquireLockWithRetry(redisTripLockKey);
+        if (lockValue == null) {
+            log.error("Unable to acquire lock with retry policy: {} lock key {} timeout milliseconds {} maximum retries {} back off milliseconds. " +
+                    "Returning void.", redisTripLockKey, 5000, 10, 200);
+            return;
+        }
+
         try {
             log.info("Reached TripService.driverLocationUpdates.");
 
@@ -184,6 +237,8 @@ public class TripService {
             }
         } catch (InvalidProtocolBufferException e) {
             log.error("Failed to parse DriverLocationEvent message: {}", e.getMessage());
+        } finally {
+            redisDistributedLock.releaseLock(redisTripLockKey, lockValue);
         }
     }
 }
