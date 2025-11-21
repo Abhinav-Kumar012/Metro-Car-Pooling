@@ -20,68 +20,74 @@ public class UserService {
     private final DriverRepository driverRepository;
     private final RiderRepository riderRepository;
 
-    public Boolean driverSignUp(String username, String password, Long licenseId){
+    public DriverEntity driverSignUp(String username, String password, Long licenseId){
         try {
             log.info("Reached UserService.driverSignUp.");
 
-            driverRepository.save(
+            DriverEntity driverEntity = driverRepository.save(
                     DriverEntity.builder()
                     .username(username)
                     .password(password)
                     .licenseId(licenseId)
                     .build()
             );
-            return true;
+            return driverEntity;
         }
         catch (Exception e){
             log.error("Error in UserService.driverSignUp = {}", e.getMessage());
-            return false;
+            return null;
         }
     }
 
-    public Boolean riderSignUp(String username, String password){
+    public RiderEntity riderSignUp(String username, String password){
         try {
             log.info("Reached UserService.riderSignUp.");
 
-            riderRepository.save(
+            RiderEntity riderEntity = riderRepository.save(
                     RiderEntity.builder()
                             .username(username)
                             .password(password)
                             .build()
             );
-            return true;
+            return riderEntity;
         }
         catch (Exception e){
             log.error("Error in UserService.riderSignUp = {}", e.getMessage());
-            return false;
+            return null;
         }
     }
 
-    public Boolean driverLogin(String username, String password) {
+    public DriverEntity driverLogin(String username, String password) {
         try {
             log.info("Reached UserService.driverLogin.");
             DriverEntity driverEntity = driverRepository.findByUsername(username).orElse(null);
             if (driverEntity == null) {
-                return false;
+                return null;
             }
-            return password.equals(driverEntity.getPassword());
+            if (password.equals(driverEntity.getPassword())) {
+                return driverEntity;
+            }
+            return null;
         } catch (Exception e) {
             log.error("Error in UserService.driverLogin = {}", e.getMessage());
-            return false;
+            return null;
         }
     }
 
-    public Boolean riderLogin(String username, String password) {
+    public RiderEntity riderLogin(String username, String password) {
         try {
             log.info("Reached UserService.riderLogin.");
             RiderEntity riderEntity =  riderRepository.findByUsername(username).orElse(null);
             if (riderEntity == null) {
-                return false;
+                return null;
             }
-            return password.equals(riderEntity.getPassword());
+            if (password.equals(riderEntity.getPassword())) {
+                return riderEntity;
+            }
+            return null;
         } catch (Exception e) {
             log.error("Error in UserService.riderLogin = {}", e.getMessage());
-            return false;
+            return null;
         }
     }
 }

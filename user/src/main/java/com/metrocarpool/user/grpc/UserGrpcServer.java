@@ -1,5 +1,7 @@
 package com.metrocarpool.user.grpc;
 
+import com.metrocarpool.user.entity.DriverEntity;
+import com.metrocarpool.user.entity.RiderEntity;
 import com.metrocarpool.user.proto.*;
 import com.metrocarpool.user.service.UserService;
 import io.grpc.stub.StreamObserver;
@@ -20,10 +22,11 @@ public class UserGrpcServer extends UserServiceGrpc.UserServiceImplBase {
         try {
             log.info("Reached UserGrpcServer.driverSignUpRequest.");
 
-            Boolean success = userService.driverSignUp(request.getUsername(), request.getPassword(),
+            DriverEntity driverEntity = userService.driverSignUp(request.getUsername(), request.getPassword(),
                     request.getLicenseId());
             SignUpOrLoginResponse signUpOrLoginResponse = SignUpOrLoginResponse.newBuilder()
-                    .setSTATUSCODE(success ? 200 : 401)
+                    .setSTATUSCODE(driverEntity == null ? 200 : 401)
+                    .setUserId(driverEntity == null ? -1 : driverEntity.getId())
                     .build();
             responseObserver.onNext(signUpOrLoginResponse);
             responseObserver.onCompleted();
@@ -39,9 +42,10 @@ public class UserGrpcServer extends UserServiceGrpc.UserServiceImplBase {
         try {
             log.info("Reached UserGrpcServer.riderSignUpRequest.");
 
-            Boolean success = userService.riderSignUp(request.getUsername(), request.getPassword());
+            RiderEntity riderEntity = userService.riderSignUp(request.getUsername(), request.getPassword());
             SignUpOrLoginResponse signUpOrLoginResponse = SignUpOrLoginResponse.newBuilder()
-                    .setSTATUSCODE(success ? 200 : 401)
+                    .setSTATUSCODE(riderEntity == null ? 200 : 401)
+                    .setUserId(riderEntity == null ? -1 : riderEntity.getId())
                     .build();
             responseObserver.onNext(signUpOrLoginResponse);
             responseObserver.onCompleted();
@@ -57,9 +61,10 @@ public class UserGrpcServer extends UserServiceGrpc.UserServiceImplBase {
         try {
             log.info("Reached UserGrpcServer.driverLoginRequest.");
 
-            Boolean success = userService.driverLogin(request.getUsername(), request.getPassword());
+            DriverEntity driverEntity = userService.driverLogin(request.getUsername(), request.getPassword());
             SignUpOrLoginResponse signUpOrLoginResponse =  SignUpOrLoginResponse.newBuilder()
-                    .setSTATUSCODE(success ? 200 : 401)
+                    .setSTATUSCODE(driverEntity == null ? 200 : 401)
+                    .setUserId(driverEntity == null ? -1 : driverEntity.getId())
                     .build();
             responseObserver.onNext(signUpOrLoginResponse);
             responseObserver.onCompleted();
@@ -75,9 +80,10 @@ public class UserGrpcServer extends UserServiceGrpc.UserServiceImplBase {
         try {
             log.info("Reached UserGrpcServer.riderLoginRequest.");
 
-            Boolean success = userService.riderLogin(request.getUsername(), request.getPassword());
+            RiderEntity riderEntity = userService.riderLogin(request.getUsername(), request.getPassword());
             SignUpOrLoginResponse signUpOrLoginResponse =   SignUpOrLoginResponse.newBuilder()
-                    .setSTATUSCODE(success ? 200 : 401)
+                    .setSTATUSCODE(riderEntity == null ? 200 : 401)
+                    .setUserId(riderEntity == null ? -1 : riderEntity.getId())
                     .build();
             responseObserver.onNext(signUpOrLoginResponse);
             responseObserver.onCompleted();

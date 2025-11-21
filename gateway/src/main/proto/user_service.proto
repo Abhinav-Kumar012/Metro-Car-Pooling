@@ -15,10 +15,10 @@ service UserService {
   rpc RiderLoginRequest(RiderLogin) returns (SignUpOrLoginResponse);
 }
 
-enum UserType {
-  DRIVER = 0;
-  RIDER = 1;
-}
+//enum UserType {
+//  DRIVER = 0;
+//  RIDER = 1;
+//}
 
 message DriverSignUp {
   string username = 1;
@@ -49,4 +49,5 @@ message RiderLogin {
 
 message SignUpOrLoginResponse {
   int32 STATUS_CODE = 1;
+  int64 userId = 2;
 }

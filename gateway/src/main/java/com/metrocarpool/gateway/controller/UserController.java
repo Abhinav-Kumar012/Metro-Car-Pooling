@@ -34,8 +34,10 @@ public class UserController {
     public SignUpOrLoginResponseDTO addDriver(@RequestBody DriverSignUpRequestDTO driverSignUpRequestDTO) {
         log.info("Reached RiderController.addDriver");
         log.info("Driver signup: Username = {}", driverSignUpRequestDTO.getUsername());
+        SignUpOrLoginResponse signUpOrLoginResponse = userGrpcClient.DriverSignUpReq(driverSignUpRequestDTO);
         return SignUpOrLoginResponseDTO.builder()
-                .STATUS_CODE(userGrpcClient.DriverSignUpReq(driverSignUpRequestDTO).getSTATUSCODE())
+                .STATUS_CODE(signUpOrLoginResponse.getSTATUSCODE())
+                .userId(signUpOrLoginResponse.getUserId())
                 .build();
     }
 
@@ -44,11 +46,10 @@ public class UserController {
         log.info("Reached RiderController.addRider");
         log.info("Rider signup: Username = {}", riderSignUpRequestDTO.getUsername());
         SignUpOrLoginResponse signUpOrLoginResponse = userGrpcClient.RiderSignUpReq(riderSignUpRequestDTO);
-        int code = signUpOrLoginResponse.getSTATUSCODE();
-        SignUpOrLoginResponseDTO signUpOrLoginResponseDTO = SignUpOrLoginResponseDTO.builder()
-                .STATUS_CODE(code)
+        return SignUpOrLoginResponseDTO.builder()
+                .STATUS_CODE(signUpOrLoginResponse.getSTATUSCODE())
+                .userId(signUpOrLoginResponse.getUserId())
                 .build();
-        return signUpOrLoginResponseDTO;
     }
 
     @PostMapping("/login-driver")
@@ -65,7 +66,7 @@ public class UserController {
             // Return token in both body and Authorization header
             return ResponseEntity.ok()
                     .header(JwtConstant.JWT_HEADER, "Bearer " + token)
-                    .body(Map.of("token", token));
+                    .body(Map.of("token", token, "userId", signUpOrLoginResponse.getUserId()));
         } else {
             log.info("Received sign up or login response = {}", signUpOrLoginResponse);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(signUpOrLoginResponse);
@@ -86,7 +87,7 @@ public class UserController {
             // Return token in both body and Authorization header
             return ResponseEntity.ok()
                     .header(JwtConstant.JWT_HEADER, "Bearer " + token)
-                    .body(Map.of("token", token));
+                    .body(Map.of("token", token, "userId", signUpOrLoginResponse.getUserId()));
         } else {
             log.info("Received sign up or login response = {}", signUpOrLoginResponse);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(signUpOrLoginResponse);
