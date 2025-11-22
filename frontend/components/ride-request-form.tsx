@@ -133,7 +133,7 @@ export function RideRequestForm({ onSubmit, riderId }: RideRequestFormProps) {
 
       {/* Visual representation of selected pickup */}
       {pickUpStation && (
-        <div className="bg-gradient-to-br from-accent/5 via-background to-accent/10 rounded-xl p-4 border-2 border-accent/20">
+        <div className="bg-linear-to-br from-accent/5 via-background to-accent/10 rounded-xl p-4 border-2 border-accent/20">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-green-500 border-4 border-green-300 shadow-lg shadow-green-500/50">
               <span className="text-white text-xl">🚇</span>
@@ -181,7 +181,7 @@ export function RideRequestForm({ onSubmit, riderId }: RideRequestFormProps) {
 
       {/* Visual representation of destination */}
       {destinationPlace && (
-        <div className="bg-gradient-to-br from-red-500/5 via-background to-red-500/10 rounded-xl p-4 border-2 border-red-500/20">
+        <div className="bg-linear-to-br from-red-500/5 via-background to-red-500/10 rounded-xl p-4 border-2 border-red-500/20">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-500 border-4 border-red-300 shadow-lg shadow-red-500/50">
               <span className="text-white text-xl">🏁</span>
@@ -219,7 +219,7 @@ export function RideRequestForm({ onSubmit, riderId }: RideRequestFormProps) {
 
       {/* Time visualization */}
       {arrivalTime && (
-        <div className="bg-gradient-to-br from-blue-500/5 via-background to-blue-500/10 rounded-xl p-4 border-2 border-blue-500/20">
+        <div className="bg-linear-to-br from-blue-500/5 via-background to-blue-500/10 rounded-xl p-4 border-2 border-blue-500/20">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-500 border-4 border-blue-300 shadow-lg shadow-blue-500/50">
               <span className="text-white text-xl">⏰</span>
@@ -238,14 +238,14 @@ export function RideRequestForm({ onSubmit, riderId }: RideRequestFormProps) {
 
       {/* Route Summary */}
       {pickUpStation && destinationPlace && arrivalTime && (
-        <div className="bg-gradient-to-br from-accent/10 via-background to-accent/5 rounded-xl p-6 border-2 border-accent/30 shadow-lg">
+        <div className="bg-linear-to-br from-accent/10 via-background to-accent/5 rounded-xl p-6 border-2 border-accent/30 shadow-lg">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <span className="text-2xl">🗺️</span>
             Trip Summary
           </h3>
           <div className="space-y-3">
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center shrink-0">
                 <span className="text-white text-sm">🚇</span>
               </div>
               <div>
@@ -257,7 +257,7 @@ export function RideRequestForm({ onSubmit, riderId }: RideRequestFormProps) {
             <div className="ml-4 border-l-2 border-dashed border-accent/30 h-6"></div>
             
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center shrink-0">
                 <span className="text-white text-sm">🏁</span>
               </div>
               <div>
