@@ -146,7 +146,7 @@ public class DriverService {
         try {
             DriverRiderMatchEvent event = DriverRiderMatchEvent.parseFrom(message);
             String messageId = event.getMessageId();
-            if (alreadyProcessed(messageId)) {
+            if (alreadyProcessed(MATCH_FOUND_KAFKA_DEDUP_KEY_PREFIX, messageId)) {
                 log.info("DriverService.matchFoundUpdateCache: Duplicate Kafka message detected. Skipping. messageId={}",
                         messageId);
                 acknowledgment.acknowledge();
@@ -156,7 +156,7 @@ public class DriverService {
             Long riderId = event.getRiderId();
             String pickUpStation = event.getPickUpStation();
             // Acknowledge that you have got the message
-            markProcessed(messageId);
+            markProcessed(MATCH_FOUND_KAFKA_DEDUP_KEY_PREFIX, messageId);
             acknowledgment.acknowledge();
 
             log.info("Reached DriverService.matchFoundUpdateCache.");
@@ -276,18 +276,18 @@ public class DriverService {
         return null; // all retries failed
     }
 
-    private boolean alreadyProcessed(String messageId) {
+    private boolean alreadyProcessed(String topicDedupKey, String messageId) {
         if (messageId == null) return false;
 
-        String redisKey = MATCH_FOUND_KAFKA_DEDUP_KEY_PREFIX + messageId;
+        String redisKey = topicDedupKey + messageId;
 
         return redisStringTemplate.hasKey(redisKey);
     }
 
-    private void markProcessed(String messageId) {
+    private void markProcessed(String topicDedupKey, String messageId) {
         if (messageId == null) return;
 
-        String redisKey = MATCH_FOUND_KAFKA_DEDUP_KEY_PREFIX + messageId;
+        String redisKey = topicDedupKey + messageId;
 
         // store marker with 24-hour TTL
         redisStringTemplate.opsForValue().set(redisKey, "1", 24, TimeUnit.HOURS);
@@ -356,7 +356,7 @@ public class DriverService {
                 // if prevPlace equals finalDestination -> evict
                 if (prevPlace != null && prevPlace.equals(cache.getFinalDestination())) {
                     // We reached final destination during this tick
-                    log.info("Driver reached final destination: driverId={}, finalDest={}", driverId, prevPlace);
+                    log.info("Driver location: Driver reached final destination: driverId={}, finalDest={}", driverId, prevPlace);
                     DriverRideCompletionEvent event = DriverRideCompletionEvent.newBuilder()
                             .setDriverId(driverId)
                             .build();
@@ -468,6 +468,8 @@ public class DriverService {
                     .setAvailableSeats(availableSeats)
                     .setFinalDestination(finalDestination)
                     .build();
+
+            log.info("Driver location: {}", event);
 
             // send with key driverId
             CompletableFuture<SendResult<String, byte[]>> future = kafkaTemplate.send(DRIVER_TOPIC,
