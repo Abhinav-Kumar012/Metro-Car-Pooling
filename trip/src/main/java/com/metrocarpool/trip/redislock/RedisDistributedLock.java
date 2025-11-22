@@ -13,35 +13,27 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class RedisDistributedLock {
 
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final RedisTemplate<String, String> redisStringTemplate;
 
     @Autowired
-    public RedisDistributedLock(RedisTemplate<String, Object> redisTemplate) {
-        this.redisTemplate = redisTemplate;
+    public RedisDistributedLock(RedisTemplate<String, String> redisStringTemplate) {
+        this.redisStringTemplate = redisStringTemplate;
     }
 
     /**
      * Try to acquire a lock using SETNX + expiration.
-     *
-     * @param lockKey   The Redis key representing the lock.
-     * @param timeoutMs Expiration time in milliseconds.
-     * @return A unique lock value (UUID) if acquired, otherwise null.
      */
     public String acquireLock(String lockKey, long timeoutMs) {
         String lockValue = UUID.randomUUID().toString();
 
-        Boolean success = redisTemplate.opsForValue()
+        Boolean success = redisStringTemplate.opsForValue()
                 .setIfAbsent(lockKey, lockValue, timeoutMs, TimeUnit.MILLISECONDS);
 
         return Boolean.TRUE.equals(success) ? lockValue : null;
     }
 
     /**
-     * Atomic lock release using Lua script to ensure only the owner releases the lock.
-     *
-     * @param lockKey   The Redis key representing the lock.
-     * @param lockValue The lock value that must match.
-     * @return true if lock is released, false otherwise.
+     * Atomic lock release using a Lua script.
      */
     public boolean releaseLock(String lockKey, String lockValue) {
         String script =
@@ -51,7 +43,7 @@ public class RedisDistributedLock {
                         "   return 0 " +
                         "end";
 
-        Long result = redisTemplate.execute((RedisCallback<Long>) connection ->
+        Long result = redisStringTemplate.execute((RedisCallback<Long>) connection ->
                 connection.eval(
                         script.getBytes(StandardCharsets.UTF_8),
                         ReturnType.INTEGER,
