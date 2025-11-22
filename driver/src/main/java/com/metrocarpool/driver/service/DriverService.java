@@ -25,6 +25,7 @@ import java.util.Optional;
 import java.util.Objects;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 // Jackson for safe JSON parsing of plain Redis values (Option B)
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -58,6 +59,9 @@ public class DriverService {
     private static final String redisDriverLockKey = "lock:drivers";
     private static final String redisNearbyLocationsLockKey = "lock:nearby-locations";
     private static final String redisLocationLocationMapLockKey = "lock:location-location";
+
+    // Redis usage to ensure Kafka consumer idempotency
+    private static final String MATCH_FOUND_KAFKA_DEDUP_KEY_PREFIX = "match_found_processed_kafka_msg:";
 
     // String template + mapper for tolerant reads of plain JSON (no @class)
     private final RedisTemplate<String, String> redisStringTemplate;
@@ -135,15 +139,24 @@ public class DriverService {
         if (lockValue == null) {
             log.error("Unable to acquire lock with retry policy: {} lock key {} timeout milliseconds {} maximum retries {} back off milliseconds. " +
                     "Returning false", redisDriverLockKey, 5000, 10, 200);
+            acknowledgment.acknowledge();
             return;
         }
 
-        try{
-            DriverRiderMatchEvent  event = DriverRiderMatchEvent.parseFrom(message);
+        try {
+            DriverRiderMatchEvent event = DriverRiderMatchEvent.parseFrom(message);
+            String messageId = event.getMessageId();
+            if (alreadyProcessed(MATCH_FOUND_KAFKA_DEDUP_KEY_PREFIX, messageId)) {
+                log.info("DriverService.matchFoundUpdateCache: Duplicate Kafka message detected. Skipping. messageId={}",
+                        messageId);
+                acknowledgment.acknowledge();
+                return;
+            }
             Long driverId = event.getDriverId();
             Long riderId = event.getRiderId();
             String pickUpStation = event.getPickUpStation();
             // Acknowledge that you have got the message
+            markProcessed(MATCH_FOUND_KAFKA_DEDUP_KEY_PREFIX, messageId);
             acknowledgment.acknowledge();
 
             log.info("Reached DriverService.matchFoundUpdateCache.");
@@ -263,6 +276,23 @@ public class DriverService {
         return null; // all retries failed
     }
 
+    private boolean alreadyProcessed(String topicDedupKey, String messageId) {
+        if (messageId == null) return false;
+
+        String redisKey = topicDedupKey + messageId;
+
+        return redisStringTemplate.hasKey(redisKey);
+    }
+
+    private void markProcessed(String topicDedupKey, String messageId) {
+        if (messageId == null) return;
+
+        String redisKey = topicDedupKey + messageId;
+
+        // store marker with 24-hour TTL
+        redisStringTemplate.opsForValue().set(redisKey, "1", 24, TimeUnit.HOURS);
+    }
+
     /**
      * Process one driver's tick: decrement distance, advance route nodes if needed, update times,
      * compute next metro station and emit Kafka event.
@@ -326,7 +356,7 @@ public class DriverService {
                 // if prevPlace equals finalDestination -> evict
                 if (prevPlace != null && prevPlace.equals(cache.getFinalDestination())) {
                     // We reached final destination during this tick
-                    log.info("Driver reached final destination: driverId={}, finalDest={}", driverId, prevPlace);
+                    log.info("Driver location: Driver reached final destination: driverId={}, finalDest={}", driverId, prevPlace);
                     DriverRideCompletionEvent event = DriverRideCompletionEvent.newBuilder()
                             .setDriverId(driverId)
                             .build();
@@ -438,6 +468,8 @@ public class DriverService {
                     .setAvailableSeats(availableSeats)
                     .setFinalDestination(finalDestination)
                     .build();
+
+            log.info("Driver location: {}", event);
 
             // send with key driverId
             CompletableFuture<SendResult<String, byte[]>> future = kafkaTemplate.send(DRIVER_TOPIC,
