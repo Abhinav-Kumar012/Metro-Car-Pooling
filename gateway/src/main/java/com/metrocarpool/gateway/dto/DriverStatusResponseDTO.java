@@ -9,5 +9,5 @@ import lombok.Setter;
 @Getter
 @Setter
 public class DriverStatusResponseDTO {
-    private Boolean STATUS;
+    private Boolean STATUSSSSS;
 }
