@@ -290,7 +290,7 @@ public class MatchingService {
                                     }
 //                                    long diff = Math.abs(riderMillis - driverArrivalMillis);
                                     long diff = riderMillis - driverArrivalMillis;
-                                    if (diff <= TIME_THRESHOLD_MS) {
+                                    if (diff <= TIME_THRESHOLD_MS && diff >= 0) {
                                         pq.add(driverCache);
                                     }
                                 }
@@ -497,8 +497,9 @@ public class MatchingService {
                                     } catch (Exception ex) {
                                         driverArrivalMillis = System.currentTimeMillis();
                                     }
-                                    long diff = Math.abs(riderMillis - driverArrivalMillis);
-                                    if (diff <= TIME_THRESHOLD_MS) {
+//                                    long diff = Math.abs(riderMillis - driverArrivalMillis);
+                                    long diff = riderMillis - driverArrivalMillis;
+                                    if (diff <= TIME_THRESHOLD_MS && diff >= 0) {
                                         pq.add(driverCache);
                                     }
                                 }
