@@ -288,7 +288,8 @@ public class MatchingService {
                                     } catch (Exception ex) {
                                         driverArrivalMillis = System.currentTimeMillis();
                                     }
-                                    long diff = Math.abs(riderMillis - driverArrivalMillis);
+//                                    long diff = Math.abs(riderMillis - driverArrivalMillis);
+                                    long diff = riderMillis - driverArrivalMillis;
                                     if (diff <= TIME_THRESHOLD_MS) {
                                         pq.add(driverCache);
                                     }
