@@ -178,40 +178,37 @@ public class MatchingService {
     // -----------------------
     // Kafka listeners and scheduled job
     // -----------------------
-
     @KafkaListener(topics = "driver-updates", groupId = "matching-service")
     public void driverInfoUpdateCache(byte[] message, Acknowledgment ack) {
-        // Try to acquire lock
         String lockValue = tryAcquireLockWithRetry(redisDriverLockKey);
         if (lockValue == null) {
-            log.error("Unable to acquire lock with retry policy: {} lock key {} timeout milliseconds {} maximum retries {} back off milliseconds. " +
-                    "Returning void.", redisDriverLockKey, 5000, 10, 200);
+            log.error("Unable to acquire lock with retry policy... Returning void.");
             return;
         } else {
-            log.info("Acquired lock with retry policy: {} lock key {} timeout milliseconds {} maximum retries {} back off milliseconds. " +
-                    "Returning false", redisDriverLockKey, 5000, 10, 200);
+            log.info("Acquired lock for redisDriverLockKey.");
         }
 
         try{
-            log.info("Reached MatchingService.driverInfoUpdateCache.");
+            log.info("Received driver-updates message; length={}", message == null ? 0 : message.length);
 
             DriverLocationEvent event = DriverLocationEvent.parseFrom(message);
             String messageId = event.getMessageId();
+            Long driverId = event.getDriverId();
+            log.info("DriverLocationEvent parsed: messageId='{}', driverId={}", messageId, driverId);
+
             if (alreadyProcessed(DRIVER_UPDATE_KAFKA_DEDUP_KEY_PREFIX, messageId)) {
-                log.info("MatchingService.driverInfoUpdateCache: Duplicate Kafka message detected. Skipping. messageId={}",
-                        messageId);
+                log.info("MatchingService.driverInfoUpdateCache: Duplicate Kafka message detected. Skipping. messageId={}", messageId);
                 ack.acknowledge();
                 return;
             }
 
-            Long driverId = event.getDriverId();
             String oldStation = event.getOldStation();
             String nextStation = event.getNextStation();
             Duration timeToNextStation = Duration.ofSeconds(event.getTimeToNextStation());
             Integer availableSeats = event.getAvailableSeats();
             String finalDestination = event.getFinalDestination();
 
-            // Acknowledge the message
+            // Acknowledge & mark processed early
             markProcessed(DRIVER_UPDATE_KAFKA_DEDUP_KEY_PREFIX, messageId);
             ack.acknowledge();
 
@@ -225,13 +222,13 @@ public class MatchingService {
                     List<MatchingDriverCache> matchingDriverCacheList = matchingCache.get(finalDestination);
                     if (matchingDriverCacheList != null) {
                         matchingDriverCacheList.removeIf(matchingDriverCache1 -> Objects.equals(matchingDriverCache1.getDriverId(), driverId));
-                        // if list empty remove the key
                         if (matchingDriverCacheList.isEmpty()) {
                             matchingCache.remove(finalDestination);
                         } else {
                             matchingCache.put(finalDestination, matchingDriverCacheList);
                         }
                         allMatchingCache.put(oldStation, matchingCache);
+                        log.debug("Writing MATCHING_DRIVER_CACHE_KEY to redis after removal. size={}", allMatchingCache.size());
                         redisDriverTemplate.opsForValue().set(MATCHING_DRIVER_CACHE_KEY, allMatchingCache);
                     }
                 }
@@ -239,7 +236,6 @@ public class MatchingService {
 
             // Add in new station
             if (nextStation != null && !nextStation.isEmpty() && finalDestination != null && !finalDestination.isEmpty()) {
-                // ensure station map and list exist
                 HashMap<String, List<MatchingDriverCache>> matchingCache1 = allMatchingCache.get(nextStation);
                 if (matchingCache1 == null) {
                     matchingCache1 = new HashMap<>();
@@ -258,10 +254,13 @@ public class MatchingService {
                 );
                 matchingCache1.put(finalDestination, matchingDriverCacheList1);
                 allMatchingCache.put(nextStation, matchingCache1);
+                log.debug("Writing MATCHING_DRIVER_CACHE_KEY to redis after add. size={}", allMatchingCache.size());
                 redisDriverTemplate.opsForValue().set(MATCHING_DRIVER_CACHE_KEY, allMatchingCache);
             }
         } catch (InvalidProtocolBufferException e) {
-            log.error("Failed to parse DriverLocationEvent message: {}", e.getMessage());
+            log.error("Failed to parse DriverLocationEvent message: {}", e.getMessage(), e);
+        } catch (Exception ex) {
+            log.error("Unexpected error in driverInfoUpdateCache: {}", ex.getMessage(), ex);
         } finally {
             redisDistributedLock.releaseLock(redisDriverLockKey, lockValue);
         }
@@ -270,29 +269,26 @@ public class MatchingService {
     @KafkaListener(topics = "rider-requests", groupId = "matching-service")
     public void riderInfoDriverMatchingAlgorithm(byte[] message,
                                                  Acknowledgment acknowledgment) {
-        // Try to acquire lock
         String lockDriverValue = tryAcquireLockWithRetry(redisDriverLockKey);
         if (lockDriverValue == null) {
-            log.error("Unable to acquire lock with retry policy: {} lock key {} timeout milliseconds {} maximum retries {} back off milliseconds. " +
-                    "Returning void.", redisDriverLockKey, 5000, 10, 200);
+            log.error("Unable to acquire lock for drivers. Returning void.");
             return;
         }
 
-        // Try to acquire lock
         String lockDistanceValue = tryAcquireLockWithRetry(redisDistanceLockKey);
         if (lockDistanceValue == null) {
-            log.error("Unable to acquire lock with retry policy: {} lock key {} timeout milliseconds {} maximum retries {} back off milliseconds. " +
-                    "Returning void.", redisDistanceLockKey, 5000, 10, 200);
+            log.error("Unable to acquire lock for distances. Returning void.");
             return;
         }
 
         try {
-            log.info("Reached MatchingService.riderInfoDriverMatchingAlgorithm.");
+            log.info("Received rider-requests message; length={}", message == null ? 0 : message.length);
             RiderRequestDriverEvent tempEvent = RiderRequestDriverEvent.parseFrom(message);
             String messageId = tempEvent.getMessageId();
+            log.info("RiderRequestDriverEvent parsed: messageId='{}', riderId={}", messageId, tempEvent.getRiderId());
 
             if (alreadyProcessed(RIDER_REQUEST_KAFKA_DEDUP_KEY_PREFIX, messageId)) {
-                log.info("MatchingService.riderInfoDriverMatchingALgorithm: Duplicate Kafka message detected. Skipping. messageId={}",
+                log.info("MatchingService.riderInfoDriverMatchingAlgorithm: Duplicate Kafka message detected. Skipping. messageId={}",
                         messageId);
                 acknowledgment.acknowledge();
                 return;
