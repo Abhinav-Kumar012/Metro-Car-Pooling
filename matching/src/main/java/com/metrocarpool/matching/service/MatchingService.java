@@ -378,13 +378,22 @@ public class MatchingService {
                 if (riderWaitingQueueCache == null) {
                     riderWaitingQueueCache = new LinkedList<>();
                 }
+//                riderWaitingQueueCache.add(RiderWaitingQueueCache.builder()
+//                        .riderId(riderId)
+//                        .arrivalTime(arrivalTime != null ? arrivalTime : Timestamps.fromMillis(System.currentTimeMillis()))
+//                        .destinationPlace(destinationPlace)
+//                        .pickUpStation(pickUpStation)
+//                        .build()
+//                );
+
                 riderWaitingQueueCache.add(RiderWaitingQueueCache.builder()
                         .riderId(riderId)
-                        .arrivalTime(arrivalTime != null ? arrivalTime : Timestamps.fromMillis(System.currentTimeMillis()))
+                        .arrivalTime(Timestamps.fromMillis(System.currentTimeMillis()))
                         .destinationPlace(destinationPlace)
                         .pickUpStation(pickUpStation)
                         .build()
                 );
+
                 log.info("Rider waiting queue: Rider added to waiting queue.");
                 redisWaitingQueueTemplate.opsForValue().set(MATCHING_WAITING_QUEUE_KEY, riderWaitingQueueCache);
             }
@@ -582,6 +591,7 @@ public class MatchingService {
 
             // If not matched, push rider back to waiting queue (end of queue)
             if (!matched) {
+                rider.setArrivalTime(Timestamps.fromMillis(System.currentTimeMillis()));
                 riderWaitingQueueCache.add(rider);
                 log.info("Rider waiting queue: Rider added to waiting queue.");
             }

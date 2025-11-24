@@ -468,6 +468,7 @@ public class DriverService {
         String finalDestination = Optional.ofNullable(cache.getFinalDestination()).orElse("");
 
         if (availableSeats > 0) {
+            System.out.println("Available seats > 0.");
             // emit Kafka event
             DriverLocationEvent event = DriverLocationEvent.newBuilder()
                     .setDriverId(driverId)
@@ -494,6 +495,7 @@ public class DriverService {
                     driverId, oldStationForEvent, nextStationForEvent, timeToNextStationSec);
 
         } else {
+            System.out.println("Available seats == 0.");
             DriverLocationEvent event = DriverLocationEvent.newBuilder()
                     .setDriverId(driverId)
                     .setOldStation(oldStationForEvent)
