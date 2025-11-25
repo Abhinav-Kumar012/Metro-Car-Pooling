@@ -17,7 +17,7 @@ export function DriverNotificationCenter() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'
     const eventSource = new EventSource(`${API_BASE_URL}/api/notification/matches?status=true`, {
       withCredentials: true
     })

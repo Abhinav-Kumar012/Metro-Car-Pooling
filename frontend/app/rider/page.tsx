@@ -38,7 +38,7 @@ export default function RiderPage() {
   useEffect(() => {
     if (!authenticated || !riderId) return
 
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'
     const eventSource = new EventSource(
       `${API_BASE_URL}/api/notification/matches?status=true`,
       { withCredentials: true }
@@ -79,7 +79,7 @@ export default function RiderPage() {
   useEffect(() => {
     if (!authenticated || !riderId) return
 
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'
     const eventSource = new EventSource(
       `${API_BASE_URL}/api/notification/driver-location-for-rider?status=true`,
       { withCredentials: true }
@@ -120,7 +120,7 @@ export default function RiderPage() {
   useEffect(() => {
     if (!authenticated || !riderId) return
 
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'
     const eventSource = new EventSource(
       `${API_BASE_URL}/api/notification/rider-ride-completion?status=true`,
       { withCredentials: true }
