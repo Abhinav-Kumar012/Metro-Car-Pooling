@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Objects;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -456,21 +457,25 @@ public class DriverService {
             oldMetroStation = passedStation;
         }
 
-        // Prepare kafka event with oldStation, nextStation
-        String oldStationForEvent = Optional.ofNullable(cache.getLastSeenMetroStation()).orElse("");
-        String nextStationForEvent = newNextMetroStation == null ? "" : newNextMetroStation;
-
-        // compute timeToNextStation using distance from current location to next station
-        int timeToNextStationSec = computeTimeToNextStationSec(cache, newNextMetroStation, locationLocationMap, nearbyStationMap);
-
         // available seats & finalDestination
         int availableSeats = Optional.ofNullable(cache.getAvailableSeats()).orElse(0);
         String finalDestination = Optional.ofNullable(cache.getFinalDestination()).orElse("");
+
+        // Prepare kafka event with oldStation, nextStation
+        String oldStationForEvent = Optional.ofNullable(cache.getLastSeenMetroStation()).orElse("");
+        String nextStationForEvent = newNextMetroStation;
+        if (nextStationForEvent == null || nextStationForEvent.isEmpty()) {
+            nextStationForEvent = finalDestination;
+        }
+
+        // compute timeToNextStation using distance from current location to next station
+        int timeToNextStationSec = computeTimeToNextStationSec(cache, newNextMetroStation, locationLocationMap, nearbyStationMap);
 
         if (availableSeats > 0) {
             System.out.println("Available seats > 0.");
             // emit Kafka event
             DriverLocationEvent event = DriverLocationEvent.newBuilder()
+                    .setMessageId(UUID.randomUUID().toString())
                     .setDriverId(driverId)
                     .setOldStation(oldStationForEvent)
                     .setNextStation(nextStationForEvent)
@@ -497,6 +502,7 @@ public class DriverService {
         } else {
             System.out.println("Available seats == 0.");
             DriverLocationEvent event = DriverLocationEvent.newBuilder()
+                    .setMessageId(UUID.randomUUID().toString())
                     .setDriverId(driverId)
                     .setOldStation(oldStationForEvent)
                     .setNextStation(nextStationForEvent)

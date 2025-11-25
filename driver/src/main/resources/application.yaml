@@ -57,3 +57,7 @@ eureka:
 logstash:
   host: logstash
   port: 5044
+
+logging:
+  level:
+    com.metrocarpool.driver: DEBUG
