@@ -458,6 +458,12 @@ public class DriverService {
             oldMetroStation = passedStation;
         }
 
+        // Log time to next route point for debugging
+        if (cache.getTimeToNextPlace() != null) {
+            log.info("Driver {}: Time to next route place ({}): {} seconds", 
+                    driverId, cache.getNextPlace(), cache.getTimeToNextPlace().getSeconds());
+        }
+
         // available seats & finalDestination
         int availableSeats = Optional.ofNullable(cache.getAvailableSeats()).orElse(0);
         String finalDestination = Optional.ofNullable(cache.getFinalDestination()).orElse("");
@@ -465,53 +471,64 @@ public class DriverService {
         // Prepare kafka event with oldStation, nextStation
         String oldStationForEvent = Optional.ofNullable(cache.getLastSeenMetroStation()).orElse("");
         String nextStationForEvent = newNextMetroStation;
-        if (nextStationForEvent == null || nextStationForEvent.isEmpty()) {
-            nextStationForEvent = finalDestination;
-        }
+        // REMOVED: Fallback to finalDestination if nextStationForEvent is empty
+        // if (nextStationForEvent == null || nextStationForEvent.isEmpty()) {
+        //     nextStationForEvent = finalDestination;
+        // }
 
         // compute timeToNextStation using distance from current location to next station
         int timeToNextStationSec = computeTimeToNextStationSec(cache, newNextMetroStation, locationLocationMap, nearbyStationMap);
 
-        if (availableSeats > 0) {
-            System.out.println("Available seats > 0.");
-            // emit Kafka event
-            DriverLocationEvent event = DriverLocationEvent.newBuilder()
-                    .setMessageId(UUID.randomUUID().toString())
-                    .setDriverId(driverId)
-                    .setOldStation(oldStationForEvent)
-                    .setNextStation(nextStationForEvent)
-                    .setTimeToNextStation(timeToNextStationSec)
-                    .setAvailableSeats(availableSeats)
-                    .setFinalDestination(finalDestination)
-                    .build();
+        // If next station is same as old station (consecutive nodes nearby same station), time is 0
+        if (nextStationForEvent != null && !nextStationForEvent.isEmpty() && nextStationForEvent.equals(oldStationForEvent)) {
+            timeToNextStationSec = 0;
+        }
 
-            log.info("Driver location: {}", event);
+        // Only send Kafka event if there is a valid next metro station
+        if (nextStationForEvent != null && !nextStationForEvent.isEmpty()) {
+            if (availableSeats > 0) {
+                System.out.println("Available seats > 0.");
+                // emit Kafka event
+                DriverLocationEvent event = DriverLocationEvent.newBuilder()
+                        .setMessageId(UUID.randomUUID().toString())
+                        .setDriverId(driverId)
+                        .setOldStation(oldStationForEvent)
+                        .setNextStation(nextStationForEvent)
+                        .setTimeToNextStation(timeToNextStationSec)
+                        .setAvailableSeats(availableSeats)
+                        .setFinalDestination(finalDestination)
+                        .build();
 
-            // send with key driverId
-            CompletableFuture<SendResult<String, byte[]>> future = kafkaTemplate.send(DRIVER_TOPIC,
-                    String.valueOf(driverId), event.toByteArray());
-            future.thenAccept(result -> {
-                log.debug("Event = {} delivered to {}", event, result.getRecordMetadata().topic());
-            }).exceptionally(ex -> {
-                log.error("Event failed. Error message = {}", ex.getMessage());
-                // Optional: retry, put into Redis dead-letter queue
-                return null;
-            });
-            log.debug("Published driver location event for driver {}: oldStation={}, nextStation={}, tts={}s",
-                    driverId, oldStationForEvent, nextStationForEvent, timeToNextStationSec);
+                log.info("Driver location: {}", event);
 
+                // send with key driverId
+                CompletableFuture<SendResult<String, byte[]>> future = kafkaTemplate.send(DRIVER_TOPIC,
+                        String.valueOf(driverId), event.toByteArray());
+                future.thenAccept(result -> {
+                    log.debug("Event = {} delivered to {}", event, result.getRecordMetadata().topic());
+                }).exceptionally(ex -> {
+                    log.error("Event failed. Error message = {}", ex.getMessage());
+                    // Optional: retry, put into Redis dead-letter queue
+                    return null;
+                });
+                log.debug("Published driver location event for driver {}: oldStation={}, nextStation={}, tts={}s",
+                        driverId, oldStationForEvent, nextStationForEvent, timeToNextStationSec);
+
+            } else {
+                System.out.println("Available seats == 0.");
+                DriverLocationEvent event = DriverLocationEvent.newBuilder()
+                        .setMessageId(UUID.randomUUID().toString())
+                        .setDriverId(driverId)
+                        .setOldStation(oldStationForEvent)
+                        .setNextStation(nextStationForEvent)
+                        .setTimeToNextStation(timeToNextStationSec)
+                        .setAvailableSeats(availableSeats)
+                        .setFinalDestination(finalDestination)
+                        .build();
+                log.info("Driver location: {}", event);
+            }
         } else {
-            System.out.println("Available seats == 0.");
-            DriverLocationEvent event = DriverLocationEvent.newBuilder()
-                    .setMessageId(UUID.randomUUID().toString())
-                    .setDriverId(driverId)
-                    .setOldStation(oldStationForEvent)
-                    .setNextStation(nextStationForEvent)
-                    .setTimeToNextStation(timeToNextStationSec)
-                    .setAvailableSeats(availableSeats)
-                    .setFinalDestination(finalDestination)
-                    .build();
-            log.info("Driver location: {}", event);
+            log.debug("Skipping Kafka event for driver {}: no next metro station found in remaining route.", driverId);
         }
 
         return false; // not evicted
@@ -714,9 +731,15 @@ public class DriverService {
         List<String> route = cache.getRoutePlaces();
         if (route == null || route.isEmpty()) return 0;
 
+        // Estimate current position: between prevNode and nextPlace
+        String currentNextPlace = cache.getNextPlace();
+        int currentNextIdx = indexOf(route, currentNextPlace);
+        if (currentNextIdx == -1) currentNextIdx = 0;
+
         // find index of route place whose nearbyStationMap maps to nextStationId
+        // Search starting from currentNextIdx to ensure we find the station AHEAD of us
         int targetIdx = -1;
-        for (int i = 0; i < route.size(); i++) {
+        for (int i = currentNextIdx; i < route.size(); i++) {
             String p = route.get(i);
             String station = nearbyStationMap.get(p);
             if (nextStationId.equals(station)) {
@@ -725,11 +748,6 @@ public class DriverService {
             }
         }
         if (targetIdx == -1) return 0;
-
-        // Estimate current position: between prevNode and nextPlace
-        String currentNextPlace = cache.getNextPlace();
-        int currentNextIdx = indexOf(route, currentNextPlace);
-        if (currentNextIdx == -1) currentNextIdx = 0;
 
         // Sum distances from current position to the target place
         double totalDistance = 0.0;
