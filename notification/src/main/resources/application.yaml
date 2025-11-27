@@ -2,6 +2,11 @@ spring:
   application:
     name: notification
 
+  data:
+    redis:
+      host: redis
+      port: 6379
+
   kafka:
     bootstrap-servers: kafka:9092
 
@@ -26,7 +31,7 @@ spring:
         isolation.level: read_committed   # Ensures consumer reads only committed messages
 
     listener:
-      ack-mode: manual
+      ack-mode: MANUAL_IMMEDIATE
 
 grpc:
   server:
