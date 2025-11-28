@@ -95,9 +95,9 @@ public class TripService {
      * Ensures top-level map exists.
      */
     @SuppressWarnings("unchecked")
-    private Map<Long, List<TripCache>> loadOrInitTripCache() {
-        Map<Long, List<TripCache>> allTripCacheData =
-                (Map<Long, List<TripCache>>) redisTemplate.opsForValue().get(TRIP_CACHE_KEY);
+    private Map<String, List<TripCache>> loadOrInitTripCache() {
+        Map<String, List<TripCache>> allTripCacheData =
+                (Map<String, List<TripCache>>) redisTemplate.opsForValue().get(TRIP_CACHE_KEY);
 
         if (allTripCacheData == null) {
             allTripCacheData = new HashMap<>();
@@ -145,13 +145,13 @@ public class TripService {
             acknowledgment.acknowledge();
 
             // Update the cache => push this pair {riderId, pickUpStation} in the list associated with key == driverId
-            Map<Long, List<TripCache>> allTripCacheData = loadOrInitTripCache();
+            Map<String, List<TripCache>> allTripCacheData = loadOrInitTripCache();
 
             // Ensure list exists for driverId
-            List<TripCache> driverList = allTripCacheData.get(driverId);
+            List<TripCache> driverList = allTripCacheData.get(String.valueOf(driverId));
             if (driverList == null) {
                 driverList = new ArrayList<>();
-                allTripCacheData.put(driverId, driverList);
+                allTripCacheData.put(String.valueOf(driverId), driverList);
             }
 
             driverList.add(TripCache.builder()
@@ -204,19 +204,20 @@ public class TripService {
 
             // Retrieve the trip cache from Redis (initialization not forced here because completion implies data may or may not exist)
             @SuppressWarnings("unchecked")
-            Map<Long, List<TripCache>> allTripCacheData =
-                    (Map<Long, List<TripCache>>) redisTemplate.opsForValue().get(TRIP_CACHE_KEY);
+            Map<String, List<TripCache>> allTripCacheData =
+                    (Map<String, List<TripCache>>) redisTemplate.opsForValue().get(TRIP_CACHE_KEY);
 
-            if (allTripCacheData == null || !allTripCacheData.containsKey(driverId)) {
+            if (allTripCacheData == null || !allTripCacheData.containsKey(String.valueOf(driverId))) {
                 // No record found for this driver; nothing to process
+                log.warn("TripService.tripCompleted: No trip cache found for driverId={}", driverId);
                 return;
             }
 
             // Get the list of riders associated with this driver
-            List<TripCache> riderList = allTripCacheData.get(driverId);
+            List<TripCache> riderList = allTripCacheData.get(String.valueOf(driverId));
             if (riderList == null || riderList.isEmpty()) {
                 // No riders associated, just remove the driver entry and return
-                allTripCacheData.remove(driverId);
+                allTripCacheData.remove(String.valueOf(driverId));
                 redisTemplate.opsForValue().set(TRIP_CACHE_KEY, allTripCacheData);
                 return;
             }
@@ -262,7 +263,7 @@ public class TripService {
             }
 
             // 3️⃣ Remove the driver’s record from Redis after completion
-            allTripCacheData.remove(driverId);
+            allTripCacheData.remove(String.valueOf(driverId));
             redisTemplate.opsForValue().set(TRIP_CACHE_KEY, allTripCacheData);
         } catch (InvalidProtocolBufferException e) {
             log.error("Failed to parse DriverRideCompletionEvent message: {}", e.getMessage());
@@ -307,15 +308,15 @@ public class TripService {
 
             // Send driver location to all associated riders
             @SuppressWarnings("unchecked")
-            Map<Long, List<TripCache>> allTripCacheData =
-                    (Map<Long, List<TripCache>>) redisTemplate.opsForValue().get(TRIP_CACHE_KEY);
-            if (allTripCacheData == null || !allTripCacheData.containsKey(driverId)) {
+            Map<String, List<TripCache>> allTripCacheData =
+                    (Map<String, List<TripCache>>) redisTemplate.opsForValue().get(TRIP_CACHE_KEY);
+            if (allTripCacheData == null || !allTripCacheData.containsKey(String.valueOf(driverId))) {
                 return;
             }
 
-            List<TripCache> riderList = allTripCacheData.get(driverId);
+            List<TripCache> riderList = allTripCacheData.get(String.valueOf(driverId));
             if (riderList == null || riderList.isEmpty()) {
-                allTripCacheData.remove(driverId);
+                allTripCacheData.remove(String.valueOf(driverId));
                 redisTemplate.opsForValue().set(TRIP_CACHE_KEY, allTripCacheData);
                 return;
             }
