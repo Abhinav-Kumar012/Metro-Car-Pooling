@@ -1,5 +1,6 @@
 package com.metrocarpool.gateway.controller;
 
+import com.google.protobuf.util.JsonFormat;
 import com.metrocarpool.gateway.client.NotificationGrpcClient;
 import com.metrocarpool.notification.proto.*;
 import lombok.RequiredArgsConstructor;
@@ -8,7 +9,6 @@ import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.SignalType;
-import org.springframework.web.bind.annotation.*;
 import java.time.Duration;
 
 @RestController
@@ -21,13 +21,20 @@ public class NotificationController {
     private final NotificationGrpcClient notificationGrpcClient;
 
     @GetMapping(value = "/matches", produces = "text/event-stream")
-    public Flux<ServerSentEvent<RiderDriverMatch>> streamRiderDriverMatches(
+    public Flux<ServerSentEvent<String>> streamRiderDriverMatches(
             @RequestParam(defaultValue = "true") boolean status) {
         log.info("Reached NotificationController.streamRiderDriverMatches.");
         return notificationGrpcClient.getMatchNotifications(status)
-                .map(match -> ServerSentEvent.builder(match).build())
+                .map(match -> {
+                    try {
+                        String json = JsonFormat.printer().print(match);
+                        return ServerSentEvent.builder(json).build();
+                    } catch (Exception e) {
+                        log.error("Error serializing match to JSON", e);
+                        return ServerSentEvent.builder("error").build();
+                    }
+                })
                 .doFinally(signal -> {
-                    System.out.println("SSE connection closed: " + signal);
                     if (signal.equals(SignalType.ON_ERROR)) {
                         log.error("SSE connection closed: {}", signal);
                     } else {
@@ -38,13 +45,20 @@ public class NotificationController {
     }
 
     @GetMapping(value = "/driver-ride-completion", produces = "text/event-stream")
-    public Flux<ServerSentEvent<DriverRideCompletion>> streamDriverRideCompletion(
+    public Flux<ServerSentEvent<String>> streamDriverRideCompletion(
             @RequestParam(defaultValue = "true") boolean status) {
         log.info("Reached NotificationController.streamDriverRideCompletion.");
         return notificationGrpcClient.getDriverCompletionNotifications(status)
-                .map(event -> ServerSentEvent.builder(event).build())
+                .map(event -> {
+                    try {
+                        String json = JsonFormat.printer().print(event);
+                        return ServerSentEvent.builder(json).build();
+                    } catch (Exception e) {
+                        log.error("Error serializing event to JSON", e);
+                        return ServerSentEvent.builder("error").build();
+                    }
+                })
                 .doFinally(signal -> {
-                    System.out.println("SSE connection closed: " + signal);
                     if (signal.equals(SignalType.ON_ERROR)) {
                         log.error("SSE connection closed: {}", signal);
                     } else  {
@@ -55,13 +69,20 @@ public class NotificationController {
     }
 
     @GetMapping(value = "/rider-ride-completion", produces = "text/event-stream")
-    public Flux<ServerSentEvent<RiderRideCompletion>> streamRiderRideCompletion(
+    public Flux<ServerSentEvent<String>> streamRiderRideCompletion(
             @RequestParam(defaultValue = "true") boolean status) {
         log.info("Reached NotificationController.streamRiderRideCompletion.");
         return notificationGrpcClient.getRiderCompletionNotifications(status)
-                .map(event -> ServerSentEvent.builder(event).build())
+                .map(event -> {
+                    try {
+                        String json = JsonFormat.printer().print(event);
+                        return ServerSentEvent.builder(json).build();
+                    } catch (Exception e) {
+                        log.error("Error serializing event to JSON", e);
+                        return ServerSentEvent.builder("error").build();
+                    }
+                })
                 .doFinally(signal -> {
-                    System.out.println("SSE connection closed: " + signal);
                     if (signal.equals(SignalType.ON_ERROR)) {
                         log.error("SSE connection closed: {}", signal);
                     } else {
@@ -72,12 +93,19 @@ public class NotificationController {
     }
 
     @GetMapping(value = "/driver-location-for-rider", produces = "text/event-stream")
-    public Flux<ServerSentEvent<NotifyRiderDriverLocation>> streamDriverLocationForRider(@RequestParam(defaultValue = "true")  boolean status) {
+    public Flux<ServerSentEvent<String>> streamDriverLocationForRider(@RequestParam(defaultValue = "true")  boolean status) {
         log.info("Reached NotificationController.streamDriverLocationForRider.");
         return notificationGrpcClient.getDriverLocationForRiderNotifications(status)
-                .map(event -> ServerSentEvent.builder(event).build())
+                .map(event -> {
+                    try {
+                        String json = JsonFormat.printer().print(event);
+                        return ServerSentEvent.builder(json).build();
+                    } catch (Exception e) {
+                        log.error("Error serializing event to JSON", e);
+                        return ServerSentEvent.builder("error").build();
+                    }
+                })
                 .doFinally(signal -> {
-                    System.out.println("SSE connection closed: " + signal);
                     if (signal.equals(SignalType.ON_ERROR)) {
                         log.error("SSE connection closed: {}", signal);
                     } else {

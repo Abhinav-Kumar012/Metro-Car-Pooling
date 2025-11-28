@@ -33,9 +33,13 @@ spring:
     listener:
       ack-mode: MANUAL_IMMEDIATE
 
+  grpc:
+    server:
+      port: 9095
+
 grpc:
   server:
-    port: 9092
+    port: 9095
 
 kafka:
   topics:
@@ -56,7 +60,7 @@ eureka:
   instance:
     prefer-ip-address: true
     metadata-map:
-      grpc.port: 9092
+      grpc.port: 9095
 
 logstash:
   host: logstash

@@ -23,10 +23,10 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @RequiredArgsConstructor
 public class NotificationService {
-    private final Sinks.Many<RiderDriverMatch> riderDriverSink = Sinks.many().multicast().onBackpressureBuffer();
-    private final Sinks.Many<DriverRideCompletion> driverCompletionSink = Sinks.many().multicast().onBackpressureBuffer();
-    private final Sinks.Many<RiderRideCompletion> riderCompletionSink = Sinks.many().multicast().onBackpressureBuffer();
-    private final Sinks.Many<NotifyRiderDriverLocation>  driverLocationForRiderSink = Sinks.many().multicast().onBackpressureBuffer();
+    private final Sinks.Many<RiderDriverMatch> riderDriverSink = Sinks.many().replay().latest();
+    private final Sinks.Many<DriverRideCompletion> driverCompletionSink = Sinks.many().replay().latest();
+    private final Sinks.Many<RiderRideCompletion> riderCompletionSink = Sinks.many().replay().latest();
+    private final Sinks.Many<NotifyRiderDriverLocation>  driverLocationForRiderSink = Sinks.many().replay().latest();
 
     // String template + mapper for tolerant reads of plain JSON (no @class)
     private final RedisTemplate<String, String> redisStringTemplate;
@@ -63,12 +63,6 @@ public class NotificationService {
 
             DriverRiderMatchEvent tempEvent = DriverRiderMatchEvent.parseFrom(message);
             String messageId = tempEvent.getMessageId();
-            if (alreadyProcessed(RIDER_DRIVER_MATCH_KAFKA_DEDUP_KEY_PREFIX, messageId)) {
-                log.info("NotificationService.publishRiderDriverMatch: Duplicate Kafka message detected. Skipping. messageId={}",
-                        messageId);
-                ack.acknowledge();
-                return;
-            }
 
             long riderId = tempEvent.getRiderId();
             long driverId = tempEvent.getDriverId();
@@ -79,7 +73,15 @@ public class NotificationService {
                     .setDriverArrivalTime(timestamp)
                     .build();
 
+            // Emit to sink ALWAYS to ensure in-memory state is restored after restart
             riderDriverSink.tryEmitNext(match);
+
+            if (alreadyProcessed(RIDER_DRIVER_MATCH_KAFKA_DEDUP_KEY_PREFIX, messageId)) {
+                log.info("NotificationService.publishRiderDriverMatch: Duplicate Kafka message detected. Skipping. messageId={}",
+                        messageId);
+                ack.acknowledge();
+                return;
+            }
 
             //manually ACK
             markProcessed(RIDER_DRIVER_MATCH_KAFKA_DEDUP_KEY_PREFIX, messageId);
@@ -103,11 +105,6 @@ public class NotificationService {
 
             DriverRideCompletionKafka tempEvent = DriverRideCompletionKafka.parseFrom(byteMessage);
             String messageId = tempEvent.getMessageId();
-            if (alreadyProcessed(DRIVER_RIDE_COMPLETION_KAFKA_DEDUP_KEY_PREFIX, messageId)) {
-                log.info("NotificationService.publishDriverRideCompletion: Duplicate Kafka message detected. Skipping. messageId={}",
-                        messageId);
-                return;
-            }
 
             long driverId = tempEvent.getDriverId();
             String message = tempEvent.getEventMessage();
@@ -117,7 +114,15 @@ public class NotificationService {
                 .setCompletionMessage(message)
                 .build();
 
+            // Emit to sink ALWAYS
             driverCompletionSink.tryEmitNext(completion);
+
+            if (alreadyProcessed(DRIVER_RIDE_COMPLETION_KAFKA_DEDUP_KEY_PREFIX, messageId)) {
+                log.info("NotificationService.publishDriverRideCompletion: Duplicate Kafka message detected. Skipping. messageId={}",
+                        messageId);
+                ack.acknowledge();
+                return;
+            }
 
             //manually ACK
             markProcessed(DRIVER_RIDE_COMPLETION_KAFKA_DEDUP_KEY_PREFIX, messageId);
@@ -141,12 +146,6 @@ public class NotificationService {
 
             RiderRideCompletionKafka tempEvent = RiderRideCompletionKafka.parseFrom(byteMessage);
             String messageId = tempEvent.getMessageId();
-            if (alreadyProcessed(RIDER_RIDE_COMPLETION_KAFKA_DEDUP_KEY_PREFIX, messageId)) {
-                log.info("NotificationService.publishRiderRideCompletion: Duplicate Kafka message detected. Skipping. messageId={}",
-                        messageId);
-                ack.acknowledge();
-                return;
-            }
 
             long riderId = tempEvent.getRiderId();
             String message = tempEvent.getEventMessage();
@@ -155,7 +154,15 @@ public class NotificationService {
                     .setCompletionMessage(message)
                     .build();
 
+            // Emit to sink ALWAYS
             riderCompletionSink.tryEmitNext(completion);
+
+            if (alreadyProcessed(RIDER_RIDE_COMPLETION_KAFKA_DEDUP_KEY_PREFIX, messageId)) {
+                log.info("NotificationService.publishRiderRideCompletion: Duplicate Kafka message detected. Skipping. messageId={}",
+                        messageId);
+                ack.acknowledge();
+                return;
+            }
 
             //manually ACK
             markProcessed(RIDER_RIDE_COMPLETION_KAFKA_DEDUP_KEY_PREFIX, messageId);
@@ -179,6 +186,17 @@ public class NotificationService {
 
             DriverLocationForRiderEvent driverLocationForRiderEvent = DriverLocationForRiderEvent.parseFrom(byteMessage);
             String messageId = driverLocationForRiderEvent.getMessageId();
+
+            NotifyRiderDriverLocation notifyRiderDriverLocation = NotifyRiderDriverLocation.newBuilder()
+                    .setDriverId(driverLocationForRiderEvent.getDriverId())
+                    .setRiderId(driverLocationForRiderEvent.getRiderId())
+                    .setNextStation(driverLocationForRiderEvent.getNextStation())
+                    .setTimeToNextStation(driverLocationForRiderEvent.getTimeToNextStation())
+                    .build();
+            
+            // Emit to sink ALWAYS
+            driverLocationForRiderSink.tryEmitNext(notifyRiderDriverLocation);
+
             if (alreadyProcessed(DRIVER_LOCATION_RIDER_KAFKA_DEDUP_KEY_PREFIX, messageId)) {
                 log.info("NotificationService.driverLocationForRiderEvent: Duplicate Kafka message detected. Skipping. messageId={}",
                         messageId);
@@ -189,13 +207,6 @@ public class NotificationService {
             markProcessed(DRIVER_LOCATION_RIDER_KAFKA_DEDUP_KEY_PREFIX, messageId);
             ack.acknowledge();
 
-            NotifyRiderDriverLocation notifyRiderDriverLocation = NotifyRiderDriverLocation.newBuilder()
-                    .setDriverId(driverLocationForRiderEvent.getDriverId())
-                    .setRiderId(driverLocationForRiderEvent.getRiderId())
-                    .setNextStation(driverLocationForRiderEvent.getNextStation())
-                    .setTimeToNextStation(driverLocationForRiderEvent.getTimeToNextStation())
-                    .build();
-            driverLocationForRiderSink.tryEmitNext(notifyRiderDriverLocation);
         } catch (InvalidProtocolBufferException e) {
             log.error("Failed to parse NotifyRiderDriverLocationEvent message: {}", e.getMessage());
         }

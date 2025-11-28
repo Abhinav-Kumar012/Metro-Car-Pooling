@@ -3,14 +3,13 @@ package com.metrocarpool.gateway.client;
 import com.metrocarpool.notification.proto.*;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.stub.StreamObserver;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
-
-import java.util.Iterator;
 
 @Component
 @Slf4j
@@ -31,25 +30,8 @@ public class NotificationGrpcClient {
                 .build();
     }
 
-    private NotificationServiceGrpc.NotificationServiceBlockingStub getStub(ManagedChannel channel) {
-        return NotificationServiceGrpc.newBlockingStub(channel);
-    }
-
-    private <T> Flux<T> createReactiveStream(Iterator<T> iterator) {
-        log.info("NotificationGrpcClient.createReactiveStream.");
-        return Flux.<T>create(sink -> {
-                    try {
-                        while (iterator.hasNext() && !sink.isCancelled()) {
-                            sink.next(iterator.next());
-                        }
-                        sink.complete();
-                    } catch (Exception e) {
-                        sink.error(e);
-                    }
-                })
-                .doFinally(signal ->
-                        System.out.println("Stream terminated with signal: " + signal)
-                );
+    private NotificationServiceGrpc.NotificationServiceStub getStub(ManagedChannel channel) {
+        return NotificationServiceGrpc.newStub(channel);
     }
 
     public Flux<RiderDriverMatch> getMatchNotifications(boolean status) {
@@ -61,21 +43,33 @@ public class NotificationGrpcClient {
                 .orElseThrow(() -> new RuntimeException("Notification service not found in Eureka"));
 
         ManagedChannel channel = createChannel(instance);
-        try {
-            NotificationServiceGrpc.NotificationServiceBlockingStub stub = getStub(channel);
+        NotificationServiceGrpc.NotificationServiceStub stub = getStub(channel);
 
-            NotificationInitiation request = NotificationInitiation.newBuilder()
-                    .setStatus(status)
-                    .build();
+        NotificationInitiation request = NotificationInitiation.newBuilder()
+                .setStatus(status)
+                .build();
 
-            return createReactiveStream(stub.matchNotificationInitiationPost(request))
-                    .share();
-        } catch (Exception e) {
-            log.error("NotificationGrpcClient.getMatchNotifications: NotificationGrpcClient.getMatchNotifications.", e);
-            return Flux.empty();
-        } finally {
+        return Flux.<RiderDriverMatch>create(sink -> {
+            stub.matchNotificationInitiationPost(request, new StreamObserver<RiderDriverMatch>() {
+                @Override
+                public void onNext(RiderDriverMatch value) {
+                    sink.next(value);
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    sink.error(t);
+                }
+
+                @Override
+                public void onCompleted() {
+                    sink.complete();
+                }
+            });
+        }).doFinally(signal -> {
+            log.info("Stream terminated with signal: {}. Shutting down channel.", signal);
             channel.shutdown();
-        }
+        });
     }
 
     public Flux<DriverRideCompletion> getDriverCompletionNotifications(boolean status) {
@@ -87,21 +81,33 @@ public class NotificationGrpcClient {
                 .orElseThrow(() -> new RuntimeException("Notification service not found in Eureka"));
 
         ManagedChannel channel = createChannel(instance);
-        try {
-            NotificationServiceGrpc.NotificationServiceBlockingStub stub = getStub(channel);
+        NotificationServiceGrpc.NotificationServiceStub stub = getStub(channel);
 
-            NotificationInitiation request = NotificationInitiation.newBuilder()
-                    .setStatus(status)
-                    .build();
+        NotificationInitiation request = NotificationInitiation.newBuilder()
+                .setStatus(status)
+                .build();
 
-            return createReactiveStream(stub.driverRideCompletionNotificationInitiationPost(request))
-                    .share();
-        } catch (Exception e) {
-            log.error("NotificationGrpcClient.getDriverCompletionNotifications: NotificationGrpcClient.getDriverCompletionNotifications.", e);
-            return Flux.empty();
-        } finally {
+        return Flux.<DriverRideCompletion>create(sink -> {
+            stub.driverRideCompletionNotificationInitiationPost(request, new StreamObserver<DriverRideCompletion>() {
+                @Override
+                public void onNext(DriverRideCompletion value) {
+                    sink.next(value);
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    sink.error(t);
+                }
+
+                @Override
+                public void onCompleted() {
+                    sink.complete();
+                }
+            });
+        }).doFinally(signal -> {
+            log.info("Stream terminated with signal: {}. Shutting down channel.", signal);
             channel.shutdown();
-        }
+        });
     }
 
     public Flux<RiderRideCompletion> getRiderCompletionNotifications(boolean status) {
@@ -113,21 +119,33 @@ public class NotificationGrpcClient {
                 .orElseThrow(() -> new RuntimeException("Notification service not found in Eureka"));
 
         ManagedChannel channel = createChannel(instance);
-        try {
-            NotificationServiceGrpc.NotificationServiceBlockingStub stub = getStub(channel);
+        NotificationServiceGrpc.NotificationServiceStub stub = getStub(channel);
 
-            NotificationInitiation request = NotificationInitiation.newBuilder()
-                    .setStatus(status)
-                    .build();
+        NotificationInitiation request = NotificationInitiation.newBuilder()
+                .setStatus(status)
+                .build();
 
-            return createReactiveStream(stub.riderRideCompletionNotificationInitiationPost(request))
-                    .share();
-        } catch (Exception e) {
-            log.error("NotificationGrpcClient.getRiderCompletionNotifications: NotificationGrpcClient.getRiderCompletionNotifications.", e);
-            return Flux.empty();
-        } finally {
+        return Flux.<RiderRideCompletion>create(sink -> {
+            stub.riderRideCompletionNotificationInitiationPost(request, new StreamObserver<RiderRideCompletion>() {
+                @Override
+                public void onNext(RiderRideCompletion value) {
+                    sink.next(value);
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    sink.error(t);
+                }
+
+                @Override
+                public void onCompleted() {
+                    sink.complete();
+                }
+            });
+        }).doFinally(signal -> {
+            log.info("Stream terminated with signal: {}. Shutting down channel.", signal);
             channel.shutdown();
-        }
+        });
     }
 
     public Flux<NotifyRiderDriverLocation> getDriverLocationForRiderNotifications(boolean status) {
@@ -139,21 +157,33 @@ public class NotificationGrpcClient {
                 .orElseThrow(() -> new RuntimeException("Notification service not found in Eureka"));
 
         ManagedChannel channel = createChannel(instance);
-        try {
-            NotificationServiceGrpc.NotificationServiceBlockingStub stub = getStub(channel);
+        NotificationServiceGrpc.NotificationServiceStub stub = getStub(channel);
 
-            NotificationInitiation request = NotificationInitiation.newBuilder()
-                    .setStatus(status)
-                    .build();
+        NotificationInitiation request = NotificationInitiation.newBuilder()
+                .setStatus(status)
+                .build();
 
-            return createReactiveStream(stub.driverLocationForRiderNotificationInitiationPost(request))
-                    .share();
-        } catch (Exception e) {
-            log.error("NotificationGrpcClient.getDriverLocationForRiderNotifications: NotificationGrpcClient.getDriverLocationForRiderNotifications.", e);
-            return Flux.empty();
-        } finally {
+        return Flux.<NotifyRiderDriverLocation>create(sink -> {
+            stub.driverLocationForRiderNotificationInitiationPost(request, new StreamObserver<NotifyRiderDriverLocation>() {
+                @Override
+                public void onNext(NotifyRiderDriverLocation value) {
+                    sink.next(value);
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    sink.error(t);
+                }
+
+                @Override
+                public void onCompleted() {
+                    sink.complete();
+                }
+            });
+        }).doFinally(signal -> {
+            log.info("Stream terminated with signal: {}. Shutting down channel.", signal);
             channel.shutdown();
-        }
+        });
     }
 
     private int getGrpcPort(ServiceInstance instance) {
