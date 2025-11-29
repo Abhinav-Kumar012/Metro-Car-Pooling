@@ -21,7 +21,13 @@ public class NotificationGrpcServer extends NotificationServiceGrpc.Notification
 
         // Subscribe to the Flux and stream each event via gRPC
         notificationService.streamRiderDriverMatches()
-                .doOnNext(responseObserver::onNext)
+                .doOnNext(data -> {
+                    try {
+                        responseObserver.onNext(data);
+                    } catch (Exception e) {
+                        log.warn("Error sending match notification to client: {}", e.getMessage());
+                    }
+                })
                 .doOnComplete(responseObserver::onCompleted)
                 .doOnError(responseObserver::onError)
                 .subscribe();
@@ -32,7 +38,13 @@ public class NotificationGrpcServer extends NotificationServiceGrpc.Notification
         log.info("Reached NotificationGrpcServer.driverRideCompletionNotificationInitiationPost.");
 
         notificationService.streamDriverRideCompletions()
-                .doOnNext(responseObserver::onNext)
+                .doOnNext(data -> {
+                    try {
+                        responseObserver.onNext(data);
+                    } catch (Exception e) {
+                        log.warn("Error sending driver completion notification to client: {}", e.getMessage());
+                    }
+                })
                 .doOnComplete(responseObserver::onCompleted)
                 .doOnError(responseObserver::onError)
                 .subscribe();
@@ -43,7 +55,13 @@ public class NotificationGrpcServer extends NotificationServiceGrpc.Notification
         log.info("Reached NotificationGrpcServer.riderRideCompletionNotificationInitiationPost.");
 
         notificationService.streamRiderRideCompletions()
-                .doOnNext(responseObserver::onNext)
+                .doOnNext(data -> {
+                    try {
+                        responseObserver.onNext(data);
+                    } catch (Exception e) {
+                        log.warn("Error sending rider completion notification to client: {}", e.getMessage());
+                    }
+                })
                 .doOnComplete(responseObserver::onCompleted)
                 .doOnError(responseObserver::onError)
                 .subscribe();
@@ -54,7 +72,13 @@ public class NotificationGrpcServer extends NotificationServiceGrpc.Notification
         log.info("Reached NotificationGrpcServer.driverLocationForRiderNotificationInitiationPost.");
 
         notificationService.streamNotifyRiderDriverLocations()
-                .doOnNext(responseObserver::onNext)
+                .doOnNext(data -> {
+                    try {
+                        responseObserver.onNext(data);
+                    } catch (Exception e) {
+                        log.warn("Error sending driver location to client: {}", e.getMessage());
+                    }
+                })
                 .doOnComplete(responseObserver::onCompleted)
                 .doOnError(responseObserver::onError)
                 .subscribe();
