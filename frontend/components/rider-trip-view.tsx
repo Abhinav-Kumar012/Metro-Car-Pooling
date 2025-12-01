@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card'
 
 interface RiderTripViewProps {
     match: {
-        riderId: number
+        riderId?: number
         driverId: number
         driverArrivalTime?: string
     }

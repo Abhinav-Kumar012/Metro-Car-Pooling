@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 
 interface MatchData {
-    riderId: number
+    riderId?: number
     driverId: number
     driverArrivalTime?: string
 }

@@ -7,6 +7,7 @@ import { RiderNav } from '@/components/rider-nav'
 import { RideRequestForm } from '@/components/ride-request-form'
 import { MatchingModal } from '@/components/matching-modal'
 import { RiderTripView } from '@/components/rider-trip-view'
+import { RideCompletionModal } from '@/components/ride-completion-modal'
 import { apiRequest } from '@/lib/api-config'
 
 type TabType = 'post-request' | 'matching' | 'trip'
@@ -36,12 +37,14 @@ export default function RiderPage() {
   const [driverLocation, setDriverLocation] = useState<DriverLocation | undefined>(undefined)
   const [showMatchModal, setShowMatchModal] = useState(false)
   const [sseConnected, setSseConnected] = useState(false)
+  const [showCompletionModal, setShowCompletionModal] = useState(false)
+  const [completionMessage, setCompletionMessage] = useState('')
 
   // Authentication check
   useEffect(() => {
     const token = localStorage.getItem('authToken')
     const role = localStorage.getItem('role')
-    const storedRiderId = localStorage.getItem('userId')
+    const storedRiderId = localStorage.getItem('Id')
 
     if (!token || role !== 'rider') {
       router.push('/auth?role=rider')
@@ -55,7 +58,15 @@ export default function RiderPage() {
 
   // SSE for match notifications
   useEffect(() => {
-    if (!authenticated || !riderId || rideState === 'active') return
+    // Only connect when waiting for or already matched with a rider
+    console.log('SSE Effect triggered. State:', { authenticated, riderId, rideState })
+
+    if (!authenticated || !riderId || (rideState !== 'waiting' && rideState !== 'matched')) {
+      console.log('SSE conditions not met, skipping connection')
+      return
+    }
+
+    console.log('Attempting to connect to SSE matches endpoint...')
 
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'
     const eventSource = new EventSource(
@@ -73,11 +84,18 @@ export default function RiderPage() {
         const match: MatchData = JSON.parse(event.data)
         console.log('Received match:', match)
 
-        // Only process if this match is for current rider
-        if (match.riderId === riderId) {
-          setCurrentMatch(match)
+        if (riderId === match.riderId) {
+          const matchWithId = { ...match, riderId: riderId as number }
+
+          console.log('Processing match:', matchWithId)
+          setCurrentMatch(matchWithId)
+
+          // Auto-transition to active trip state to enable SSE connections immediately
+          setRideState('active')
+          setActiveTab('trip')
+
+          // Show modal as confirmation/info
           setShowMatchModal(true)
-          setRideState('matched')
         }
       } catch (error) {
         console.error('Error processing match notification:', error)
@@ -225,7 +243,13 @@ export default function RiderPage() {
 
   const handleRideCompletion = (message: string) => {
     console.log('Ride completion:', message)
-    alert(`✅ ${message}`)
+    setCompletionMessage(message)
+    setShowCompletionModal(true)
+  }
+
+  const handleCloseCompletion = () => {
+    setShowCompletionModal(false)
+    setCompletionMessage('')
 
     // Reset ride state but DO NOT logout
     setRideState('idle')
@@ -268,8 +292,8 @@ export default function RiderPage() {
             onClick={() => rideState === 'idle' && setActiveTab('post-request')}
             disabled={rideState !== 'idle'}
             className={`px-6 py-3 font-medium transition-colors ${activeTab === 'post-request'
-                ? 'text-accent border-b-2 border-accent'
-                : 'text-muted-foreground hover:text-foreground'
+              ? 'text-accent border-b-2 border-accent'
+              : 'text-muted-foreground hover:text-foreground'
               } ${rideState !== 'idle' ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             Post Ride Request
@@ -278,8 +302,8 @@ export default function RiderPage() {
             onClick={() => setActiveTab('matching')}
             disabled={rideState === 'idle'}
             className={`px-6 py-3 font-medium transition-colors ${activeTab === 'matching'
-                ? 'text-accent border-b-2 border-accent'
-                : 'text-muted-foreground hover:text-foreground'
+              ? 'text-accent border-b-2 border-accent'
+              : 'text-muted-foreground hover:text-foreground'
               } ${rideState === 'idle' ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {rideState === 'waiting' ? 'Waiting for Match...' : 'Matching'}
@@ -288,8 +312,8 @@ export default function RiderPage() {
             onClick={() => setActiveTab('trip')}
             disabled={rideState !== 'active'}
             className={`px-6 py-3 font-medium transition-colors ${activeTab === 'trip'
-                ? 'text-accent border-b-2 border-accent'
-                : 'text-muted-foreground hover:text-foreground'
+              ? 'text-accent border-b-2 border-accent'
+              : 'text-muted-foreground hover:text-foreground'
               } ${rideState !== 'active' ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             Active Trip
@@ -340,6 +364,13 @@ export default function RiderPage() {
         role="rider"
         onAccept={handleAcceptMatch}
         onReject={handleRejectMatch}
+      />
+
+      {/* Completion Modal */}
+      <RideCompletionModal
+        isOpen={showCompletionModal}
+        message={completionMessage}
+        onClose={handleCloseCompletion}
       />
     </div>
   )

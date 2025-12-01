@@ -35,7 +35,7 @@ export default function DriverPage() {
   useEffect(() => {
     const token = localStorage.getItem('authToken')
     const role = localStorage.getItem('role')
-    const storedDriverId = localStorage.getItem('userId')
+    const storedDriverId = localStorage.getItem('Id')
 
     if (!token || role !== 'driver') {
       router.push('/auth?role=driver')
@@ -49,7 +49,8 @@ export default function DriverPage() {
 
   // SSE for match notifications
   useEffect(() => {
-    if (!authenticated || !driverId || rideState === 'active') return
+    // Only connect when waiting for or already matched with a driver
+    if (!authenticated || !driverId || (rideState !== 'waiting' && rideState !== 'matched')) return
 
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'
     const eventSource = new EventSource(
@@ -231,8 +232,8 @@ export default function DriverPage() {
             onClick={() => rideState === 'idle' && setActiveTab('post-offer')}
             disabled={rideState !== 'idle'}
             className={`px-6 py-3 font-medium transition-colors ${activeTab === 'post-offer'
-                ? 'text-primary border-b-2 border-primary'
-                : 'text-muted-foreground hover:text-foreground'
+              ? 'text-primary border-b-2 border-primary'
+              : 'text-muted-foreground hover:text-foreground'
               } ${rideState !== 'idle' ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             Post Ride Offer
@@ -241,8 +242,8 @@ export default function DriverPage() {
             onClick={() => setActiveTab('matching')}
             disabled={rideState === 'idle'}
             className={`px-6 py-3 font-medium transition-colors ${activeTab === 'matching'
-                ? 'text-primary border-b-2 border-primary'
-                : 'text-muted-foreground hover:text-foreground'
+              ? 'text-primary border-b-2 border-primary'
+              : 'text-muted-foreground hover:text-foreground'
               } ${rideState === 'idle' ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {rideState === 'waiting' ? 'Waiting for Match...' : 'Matching'}
@@ -251,8 +252,8 @@ export default function DriverPage() {
             onClick={() => setActiveTab('trip')}
             disabled={rideState !== 'active'}
             className={`px-6 py-3 font-medium transition-colors ${activeTab === 'trip'
-                ? 'text-primary border-b-2 border-primary'
-                : 'text-muted-foreground hover:text-foreground'
+              ? 'text-primary border-b-2 border-primary'
+              : 'text-muted-foreground hover:text-foreground'
               } ${rideState !== 'active' ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             Active Trip

@@ -100,7 +100,7 @@ function AuthContent() {
           localStorage.setItem('authToken', data.token)
           localStorage.setItem('username', formData.username)
           localStorage.setItem('role', role)
-          localStorage.setItem('Id', data.userId)
+          localStorage.setItem('userId', data.userId)
 
           setSuccess('Login successful! Redirecting...')
 
@@ -168,8 +168,8 @@ function AuthContent() {
                 setSuccess('')
               }}
               className={`flex-1 py-2 px-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${role === 'driver'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
                 }`}
             >
               <span className="text-lg">🚗</span>
@@ -188,8 +188,8 @@ function AuthContent() {
                 setSuccess('')
               }}
               className={`flex-1 py-2 px-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${role === 'rider'
-                  ? 'bg-accent text-accent-foreground'
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                ? 'bg-accent text-accent-foreground'
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
                 }`}
             >
               <span className="text-lg">👤</span>
@@ -206,8 +206,8 @@ function AuthContent() {
                 setSuccess('')
               }}
               className={`flex-1 py-2 font-medium transition-colors ${isLogin
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-muted-foreground'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-muted-foreground'
                 }`}
             >
               Login
@@ -219,8 +219,8 @@ function AuthContent() {
                 setSuccess('')
               }}
               className={`flex-1 py-2 font-medium transition-colors ${!isLogin
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-muted-foreground'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-muted-foreground'
                 }`}
             >
               Sign Up
