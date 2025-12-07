@@ -35,14 +35,20 @@ export default function DriverPage() {
   useEffect(() => {
     const token = localStorage.getItem('authToken')
     const role = localStorage.getItem('role')
-    const storedDriverId = localStorage.getItem('Id')
+    const storedDriverId = localStorage.getItem('userId')
+
+    console.log('Auth check - token:', !!token, 'role:', role, 'storedDriverId:', storedDriverId)
 
     if (!token || role !== 'driver') {
       router.push('/auth?role=driver')
     } else {
       setAuthenticated(true)
       if (storedDriverId) {
-        setDriverId(parseInt(storedDriverId))
+        const parsedId = parseInt(storedDriverId, 10)
+        console.log('Setting driverId to:', parsedId)
+        setDriverId(parsedId)
+      } else {
+        console.warn('No userId found in localStorage! User may need to re-login.')
       }
     }
   }, [router])
@@ -69,7 +75,7 @@ export default function DriverPage() {
         console.log('Received match:', match)
 
         // Only process if this match is for current driver
-        if (match.driverId === driverId) {
+        if (Number(match.driverId) === driverId) {
           setCurrentMatch(match)
           setShowMatchModal(true)
           setRideState('matched')
@@ -110,7 +116,7 @@ export default function DriverPage() {
         const completion = JSON.parse(event.data)
         console.log('Ride completion received:', completion)
 
-        if (completion.driverId === driverId) {
+        if (Number(completion.driverId) === driverId) {
           handleRideCompletion(completion.completionMessage)
         }
       } catch (error) {
