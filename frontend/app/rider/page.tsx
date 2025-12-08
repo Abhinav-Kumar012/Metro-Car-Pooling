@@ -164,7 +164,14 @@ export default function RiderPage() {
 
   // SSE for ride completion
   useEffect(() => {
-    if (!authenticated || !riderId || rideState !== 'active') return
+    console.log('Ride completion SSE effect triggered. State:', { authenticated, riderId, rideState })
+
+    if (!authenticated || !riderId || rideState !== 'active') {
+      console.log('Ride completion SSE conditions not met, skipping connection')
+      return
+    }
+
+    console.log('Attempting to connect to rider ride completion SSE endpoint...')
 
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'
     const eventSource = new EventSource(
@@ -173,7 +180,7 @@ export default function RiderPage() {
     )
 
     eventSource.onopen = () => {
-      console.log('SSE connection opened for rider ride completion')
+      console.log('✅ SSE connection opened for rider ride completion')
     }
 
     eventSource.onmessage = (event) => {
@@ -182,7 +189,9 @@ export default function RiderPage() {
         console.log('Ride completion received:', completion)
 
         if (Number(completion.riderId) === riderId) {
-          handleRideCompletion(completion.completionMessage)
+          console.log('Completion is for this rider, triggering handleRideCompletion')
+          setCompletionMessage(completion.completionMessage || 'Ride completed successfully!')
+          setShowCompletionModal(true)
         }
       } catch (error) {
         console.error('Error processing completion notification:', error)
@@ -234,17 +243,10 @@ export default function RiderPage() {
     }
   }
 
-  const handleAcceptMatch = () => {
+  const handleMatchContinue = () => {
     setShowMatchModal(false)
     setRideState('active')
     setActiveTab('trip')
-  }
-
-  const handleRejectMatch = () => {
-    setShowMatchModal(false)
-    setCurrentMatch(null)
-    setDriverLocation(undefined)
-    setRideState('waiting')
   }
 
   const handleRideCompletion = (message: string) => {
@@ -368,8 +370,7 @@ export default function RiderPage() {
         isOpen={showMatchModal}
         match={currentMatch}
         role="rider"
-        onAccept={handleAcceptMatch}
-        onReject={handleRejectMatch}
+        onContinue={handleMatchContinue}
       />
 
       {/* Completion Modal */}
