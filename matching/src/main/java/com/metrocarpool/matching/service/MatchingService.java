@@ -475,7 +475,7 @@ public class MatchingService {
         }
     }
 
-    @Scheduled(cron = "*/5 * * * * *")  // Run every 5 seconds instead of every second
+    @Scheduled(cron = "* * * * * *") 
     public void cronJobMatchingAlgorithm() {
         // Try to acquire lock
         String lockDriverValue = tryAcquireLockWithRetry(redisDriverLockKey);
