@@ -477,7 +477,7 @@ public class MatchingService {
 
     @Scheduled(cron = "* * * * * *")
     public void cronJobMatchingAlgorithm() {
-        // log.info("Reached MatchingService.cronJobMatchingAlgorithm.");
+         log.info("Reached MatchingService.cronJobMatchingAlgorithm.");
 
         // Try to acquire lock
         String lockDriverValue = tryAcquireLockWithRetry(redisDriverLockKey);

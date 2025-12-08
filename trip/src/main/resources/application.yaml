@@ -7,7 +7,7 @@ spring:
 
   kafka:
     bootstrap-servers: kafka:9092
-
+#    bootstrap-servers: metro-kafka-kafka-bootstrap:9092 (for k8s)
     listener:
       ack-mode: MANUAL_IMMEDIATE
 
