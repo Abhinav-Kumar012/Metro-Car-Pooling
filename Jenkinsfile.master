@@ -1,0 +1,225 @@
+pipeline {
+    agent any
+
+    parameters {
+        booleanParam(name: 'FORCE_INFRA_UPDATE', defaultValue: false, 
+                     description: 'Force infrastructure stack rebuild in K8s')
+        booleanParam(name: 'DEPLOY_ALL', defaultValue: false,
+                     description: 'Deploy all services regardless of changes')
+    }
+
+    environment {
+        DOCKERHUB_CREDS = credentials('dockerhub-creds')
+        EMAIL_IDS_TO_SEND = "valmik.belgaonkar@iiitb.ac.in,vaibhav.bajoriya@iiitb.ac.in,abhinav.deshpande@iiitb.ac.in,krish.dave@iiitb.ac.in"
+        GIT_REPO = 'https://github.com/valmikGit/Metro-Car-Pooling.git'
+    }
+
+    triggers {
+        githubPush()  // Single webhook entry point for all services
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: "${GIT_REPO}"
+            }
+        }
+
+        stage('Detect Changes') {
+            steps {
+                script {
+                    // Get list of changed files
+                    def changedFiles = sh(
+                        script: "git diff --name-only HEAD~1 HEAD || echo ''",
+                        returnStdout: true
+                    ).trim()
+                    
+                    echo "Changed files:\n${changedFiles}"
+                    
+                    // Define service mappings
+                    def serviceMappings = [
+                        'driver': 'driver-service',
+                        'rider': 'rider-service',
+                        'user': 'user-service',
+                        'matching': 'matching-service',
+                        'gateway': 'gateway-service',
+                        'trip': 'trip-service',
+                        'notification': 'notification-service',
+                        'registry': 'registry-service',
+                        'frontend': 'frontend-service'
+                    ]
+                    
+                    // Detect which services changed
+                    env.CHANGED_SERVICES = ''
+                    env.INFRA_CHANGED = 'false'
+                    
+                    changedFiles.split('\n').each { file ->
+                        serviceMappings.each { folder, jobName ->
+                            if (file.startsWith("${folder}/")) {
+                                if (!env.CHANGED_SERVICES.contains(jobName)) {
+                                    env.CHANGED_SERVICES = env.CHANGED_SERVICES ? "${env.CHANGED_SERVICES},${jobName}" : jobName
+                                }
+                            }
+                        }
+                        // Check for infra changes
+                        if (file.startsWith('infra/') || file.startsWith('k8s/')) {
+                            env.INFRA_CHANGED = 'true'
+                        }
+                    }
+                    
+                    // Handle DEPLOY_ALL parameter
+                    if (params.DEPLOY_ALL) {
+                        env.CHANGED_SERVICES = serviceMappings.values().join(',')
+                        echo "DEPLOY_ALL enabled - deploying all services"
+                    }
+                    
+                    echo "Services to deploy: ${env.CHANGED_SERVICES ?: 'None'}"
+                    echo "Infrastructure changed: ${env.INFRA_CHANGED}"
+                }
+            }
+        }
+
+        stage('Deploy Infrastructure') {
+            when {
+                expression {
+                    return env.INFRA_CHANGED == 'true' || params.FORCE_INFRA_UPDATE
+                }
+            }
+            steps {
+                echo "Deploying infrastructure to Kubernetes (Minikube)..."
+                
+                // Ensure we're using minikube context
+                sh "kubectl config use-context minikube || echo 'Using current context'"
+                
+                // Apply namespace first
+                sh "kubectl apply -f k8s/namespace.yaml || true"
+                
+                // Deploy infrastructure components to metro namespace
+                sh """
+                    kubectl apply -f k8s/redis/
+                    kubectl apply -f k8s/postgres/
+                    kubectl apply -f k8s/kafka/
+                    kubectl apply -f k8s/zookeeper/
+                    kubectl apply -f k8s/elasticsearch/
+                    kubectl apply -f k8s/registry/
+                """
+                
+                // Deploy Ingress for routing
+                sh "kubectl apply -f k8s/ingress.yaml"
+                
+                // Wait for critical infrastructure to be ready
+                sh """
+                    kubectl rollout status deployment/redis -n metro --timeout=120s || true
+                    kubectl rollout status deployment/postgres -n metro --timeout=120s || true
+                    kubectl rollout status deployment/kafka -n metro --timeout=120s || true
+                """
+                
+                echo "Infrastructure deployment complete"
+            }
+        }
+
+        stage('Trigger Service Pipelines') {
+            when {
+                expression {
+                    return env.CHANGED_SERVICES?.trim()
+                }
+            }
+            steps {
+                script {
+                    def services = env.CHANGED_SERVICES.split(',')
+                    def parallelBuilds = [:]
+                    
+                    services.each { service ->
+                        def trimmedService = service.trim()
+                        if (trimmedService) {
+                            parallelBuilds[trimmedService] = {
+                                echo "Triggering ${trimmedService}..."
+                                build job: trimmedService,
+                                      parameters: [
+                                          string(name: 'GIT_COMMIT', value: env.GIT_COMMIT),
+                                          string(name: 'TRIGGERED_BY', value: 'master-orchestrator')
+                                      ],
+                                      wait: true,
+                                      propagate: true
+                            }
+                        }
+                    }
+                    
+                    if (parallelBuilds.size() > 0) {
+                        parallel parallelBuilds
+                    } else {
+                        echo "No services to trigger"
+                    }
+                }
+            }
+        }
+
+        stage('No Changes Detected') {
+            when {
+                expression {
+                    return !env.CHANGED_SERVICES?.trim() && env.INFRA_CHANGED == 'false' && !params.FORCE_INFRA_UPDATE && !params.DEPLOY_ALL
+                }
+            }
+            steps {
+                echo "No relevant changes detected. Skipping build."
+            }
+        }
+
+        stage('Summary') {
+            steps {
+                script {
+                    def summary = """
+                    =============================================
+                    BUILD SUMMARY
+                    =============================================
+                    Commit: ${env.GIT_COMMIT ?: 'N/A'}
+                    Infrastructure Updated: ${env.INFRA_CHANGED == 'true' || params.FORCE_INFRA_UPDATE}
+                    Services Deployed: ${env.CHANGED_SERVICES ?: 'None'}
+                    Deploy All: ${params.DEPLOY_ALL}
+                    Force Infra: ${params.FORCE_INFRA_UPDATE}
+                    =============================================
+                    """
+                    echo summary
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Master orchestrator completed successfully"
+            emailext(
+                to: "${EMAIL_IDS_TO_SEND}",
+                subject: "SUCCESS: Master Pipeline #${env.BUILD_NUMBER}",
+                body: """
+                <h2>Build Successful!</h2>
+                <p><b>Job:</b> ${env.JOB_NAME}</p>
+                <p><b>Build Number:</b> ${env.BUILD_NUMBER}</p>
+                <p><b>Services Deployed:</b> ${env.CHANGED_SERVICES ?: 'None'}</p>
+                <p><b>Infrastructure Updated:</b> ${env.INFRA_CHANGED == 'true' || params.FORCE_INFRA_UPDATE}</p>
+                <p><b>URL:</b> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
+                """,
+                mimeType: 'text/html'
+            )
+        }
+        failure {
+            echo "Master orchestrator failed"
+            emailext(
+                to: "${EMAIL_IDS_TO_SEND}",
+                subject: "FAILURE: Master Pipeline #${env.BUILD_NUMBER}",
+                body: """
+                <h2>Build Failed!</h2>
+                <p><b>Job:</b> ${env.JOB_NAME}</p>
+                <p><b>Build Number:</b> ${env.BUILD_NUMBER}</p>
+                <p><b>Services Attempted:</b> ${env.CHANGED_SERVICES ?: 'None'}</p>
+                <p><b>URL:</b> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
+                <p>Please check the console output for details.</p>
+                """,
+                mimeType: 'text/html'
+            )
+        }
+        cleanup {
+            cleanWs()
+        }
+    }
+}

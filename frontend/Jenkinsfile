@@ -8,7 +8,7 @@ pipeline {
 
     environment {
         DOCKERHUB_CREDS = credentials('dockerhub-creds')
-        IMAGE_NAME = "notification_microservice"
+        IMAGE_NAME = "frontend_microservice"
         IMAGE_TAG = "latest"
         DOCKER_IMAGE = "${DOCKERHUB_CREDS_USR}/${IMAGE_NAME}:${IMAGE_TAG}"
         EMAIL_IDS_TO_SEND = "valmik.belgaonkar@iiitb.ac.in,vaibhav.bajoriya@iiitb.ac.in,abhinav.deshpande@iiitb.ac.in,krish.dave@iiitb.ac.in"
@@ -23,24 +23,28 @@ pipeline {
             }
         }
 
-        stage('Build') {
+        stage('Install Dependencies') {
             steps {
-                echo "Building notification with Maven..."
-                sh "mvn -f notification/pom.xml clean package -DskipTests"
+                echo "Installing npm dependencies..."
+                dir('frontend') {
+                    sh "npm ci"
+                }
             }
         }
 
-        stage('Test') {
+        stage('Build') {
             steps {
-                echo "Running unit tests..."
-                sh "mvn -f notification/pom.xml test"
+                echo "Building Next.js application..."
+                dir('frontend') {
+                    sh "npm run build"
+                }
             }
         }
 
         stage('Docker Build') {
             steps {
                 echo "Building Docker image..."
-                sh "docker build -t ${DOCKER_IMAGE} notification/"
+                sh "docker build -t ${DOCKER_IMAGE} frontend/"
             }
         }
 
@@ -55,27 +59,30 @@ pipeline {
         stage('Deploy to K8s') {
             steps {
                 echo "Deploying to Kubernetes (Minikube)..."
+                // Ensure we're using minikube context
                 sh "kubectl config use-context minikube || echo 'Using current context'"
-                sh "sed -i 's|notification_microservice:latest|${DOCKER_IMAGE}|g' k8s/notification-deployment.yaml"
-                sh "kubectl apply -f k8s/notification-deployment.yaml"
+                // Update image in deployment yaml
+                sh "sed -i 's|frontend_microservice:latest|${DOCKER_IMAGE}|g' k8s/frontend-deployment.yaml"
+                // Apply K8s manifests
+                sh "kubectl apply -f k8s/frontend-deployment.yaml"
             }
         }
 
         stage('Verify Deployment') {
             steps {
                 echo "Verifying deployment..."
-                sh "kubectl rollout status deployment/notification-service -n metro --timeout=180s"
-                echo "Notification service deployment successful!"
+                sh "kubectl rollout status deployment/frontend-service -n metro --timeout=180s"
+                echo "Frontend deployment successful!"
             }
         }
     }
 
     post {
         success {
-            echo "Successfully executed the notification pipeline"
+            echo "Successfully executed the frontend pipeline"
             emailext(
                 to: "${EMAIL_IDS_TO_SEND}",
-                subject: "SUCCESS: Notification Pipeline #${env.BUILD_NUMBER}",
+                subject: "SUCCESS: Frontend Pipeline #${env.BUILD_NUMBER}",
                 body: """
                 <b>Build successful!</b><br>
                 Job: ${env.JOB_NAME}<br>
@@ -87,10 +94,10 @@ pipeline {
             )
         }
         failure {
-            echo "Failed to execute the notification pipeline"
+            echo "Failed to execute the frontend pipeline"
             emailext(
                 to: "${EMAIL_IDS_TO_SEND}",
-                subject: "FAILURE: Notification Pipeline #${env.BUILD_NUMBER}",
+                subject: "FAILURE: Frontend Pipeline #${env.BUILD_NUMBER}",
                 body: """
                 <b>Build failed!</b><br>
                 Job: ${env.JOB_NAME}<br>
