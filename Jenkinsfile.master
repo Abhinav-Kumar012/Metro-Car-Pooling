@@ -103,7 +103,7 @@ pipeline {
             }
             steps {
                 echo "Building contracts module (shared dependency)..."
-                sh "mvn -f contracts/pom.xml clean install -DskipTests"
+                sh "mvn clean install -DskipTests"
                 echo "Contracts installed to local Maven repository"
             }
         }
@@ -116,7 +116,7 @@ pipeline {
             }
             steps {
                 echo "Building registry service..."
-                sh "mvn -f registry/pom.xml clean package -DskipTests"
+                sh "mvn clean package -DskipTests"
                 
                 echo "Building and pushing Registry Docker image..."
                 sh "docker build -t ${DOCKERHUB_CREDS_USR}/registry_microservice:latest registry/"
