@@ -11,7 +11,7 @@ pipeline {
         IMAGE_NAME = "gateway_microservice"
         IMAGE_TAG = "latest"
         DOCKER_IMAGE = "${DOCKERHUB_CREDS_USR}/${IMAGE_NAME}:${IMAGE_TAG}"
-        EMAIL_IDS_TO_SEND = ""
+        EMAIL_IDS_TO_SEND = "valmik.belgaonkar@iiitb.ac.in"
     }
 
     stages {
@@ -71,33 +71,33 @@ pipeline {
     post {
         success {
             echo "Successfully executed the gateway pipeline"
-            emailext(
-                to: "${EMAIL_IDS_TO_SEND}",
-                subject: "SUCCESS: Gateway Pipeline #${env.BUILD_NUMBER}",
-                body: """
-                <b>Build successful!</b><br>
-                Job: ${env.JOB_NAME}<br>
-                Build Number: ${env.BUILD_NUMBER}<br>
-                Triggered By: ${params.TRIGGERED_BY}<br>
-                URL: <a href="${env.BUILD_URL}">${env.BUILD_URL}</a>
-                """,
-                mimeType: 'text/html'
-            )
+            // emailext(
+            //     to: "${EMAIL_IDS_TO_SEND}",
+            //     subject: "SUCCESS: Gateway Pipeline #${env.BUILD_NUMBER}",
+            //     body: """
+            //     <b>Build successful!</b><br>
+            //     Job: ${env.JOB_NAME}<br>
+            //     Build Number: ${env.BUILD_NUMBER}<br>
+            //     Triggered By: ${params.TRIGGERED_BY}<br>
+            //     URL: <a href="${env.BUILD_URL}">${env.BUILD_URL}</a>
+            //     """,
+            //     mimeType: 'text/html'
+            // )
         }
         failure {
             echo "Failed to execute the gateway pipeline"
-            emailext(
-                to: "${EMAIL_IDS_TO_SEND}",
-                subject: "FAILURE: Gateway Pipeline #${env.BUILD_NUMBER}",
-                body: """
-                <b>Build failed!</b><br>
-                Job: ${env.JOB_NAME}<br>
-                Build Number: ${env.BUILD_NUMBER}<br>
-                Triggered By: ${params.TRIGGERED_BY}<br>
-                URL: <a href="${env.BUILD_URL}">${env.BUILD_URL}</a>
-                """,
-                mimeType: 'text/html'
-            )
+            // emailext(
+            //     to: "${EMAIL_IDS_TO_SEND}",
+            //     subject: "FAILURE: Gateway Pipeline #${env.BUILD_NUMBER}",
+            //     body: """
+            //     <b>Build failed!</b><br>
+            //     Job: ${env.JOB_NAME}<br>
+            //     Build Number: ${env.BUILD_NUMBER}<br>
+            //     Triggered By: ${params.TRIGGERED_BY}<br>
+            //     URL: <a href="${env.BUILD_URL}">${env.BUILD_URL}</a>
+            //     """,
+            //     mimeType: 'text/html'
+            // )
         }
         cleanup {
             cleanWs()
