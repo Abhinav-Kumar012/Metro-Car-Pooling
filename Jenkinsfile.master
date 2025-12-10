@@ -137,33 +137,79 @@ pipeline {
                 // Apply namespace first
                 sh "kubectl apply -f k8s/namespace.yaml || true"
                 
-                // Deploy core infrastructure components
+                // ============================================
+                // PHASE 1: Core Infrastructure (deploy & wait)
+                // ============================================
+                
+                // Deploy Redis
+                echo "Deploying Redis..."
+                sh "kubectl apply -f k8s/redis/"
+                sh "kubectl rollout status deployment/redis -n metro --timeout=120s || true"
+                
+                // Install Zalando Postgres Operator CRDs first (cluster-wide)
+                echo "Installing Zalando Postgres Operator CRDs..."
                 sh """
-                    kubectl apply -f k8s/redis/
-                    kubectl apply -f k8s/postgres/
-                    kubectl apply -f k8s/elasticsearch/
+                    kubectl apply -f https://raw.githubusercontent.com/zalando/postgres-operator/master/manifests/postgresql-operator-default-configuration.yaml || true
+                    kubectl apply -f https://raw.githubusercontent.com/zalando/postgres-operator/master/manifests/operatorconfiguration.crd.yaml || true
+                    kubectl apply -f https://raw.githubusercontent.com/zalando/postgres-operator/master/manifests/postgresql.crd.yaml || true
                 """
                 
-                // Deploy Strimzi Kafka (KRaft mode - no Zookeeper needed)
-                echo "Deploying Strimzi Kafka..."
-                sh "kubectl apply -f k8s/kafka/"
+                // Install Zalando Postgres Operator (in default namespace as it's cluster-scoped)
+                echo "Installing Zalando Postgres Operator..."
+                sh """
+                    kubectl apply -f https://raw.githubusercontent.com/zalando/postgres-operator/master/manifests/configmap.yaml || true
+                    kubectl apply -f https://raw.githubusercontent.com/zalando/postgres-operator/master/manifests/operator-service-account-rbac.yaml || true
+                    kubectl apply -f https://raw.githubusercontent.com/zalando/postgres-operator/master/manifests/postgres-operator.yaml || true
+                """
                 
-                // Wait for Strimzi Kafka to be ready
-                echo "Waiting for Strimzi Kafka cluster to be ready..."
-                sh "kubectl wait kafka/metro-kafka --for=condition=Ready --timeout=300s -n metro || echo 'Kafka still initializing...'"
+                // Wait for Zalando Postgres Operator to be ready
+                echo "Waiting for Zalando Postgres Operator to be ready..."
+                sh "kubectl rollout status deployment/postgres-operator -n default --timeout=180s || echo 'Operator still starting...'"
+                sh "sleep 10"
                 
-                // Deploy registry
+                // Deploy Postgres cluster using Zalando Operator (master-slave)
+                echo "Deploying Postgres Master-Slave cluster..."
+                sh "kubectl apply -f k8s/postgres/zalando-postgres.yaml"
+                sh "sleep 20"
+                
+                // Deploy Zookeeper first (required for Kafka)
+                echo "Deploying Zookeeper..."
+                sh "kubectl apply -f k8s/zookeeper/"
+                sh "kubectl rollout status deployment/zookeeper -n metro --timeout=120s || true"
+                
+                // Deploy Kafka (depends on Zookeeper)
+                echo "Deploying Kafka..."
+                sh "kubectl apply -f k8s/kafka/kafka-deployment.yaml"
+                sh "kubectl rollout status deployment/kafka -n metro --timeout=180s || true"
+                
+                // Deploy Elasticsearch
+                echo "Deploying Elasticsearch..."
+                sh "kubectl apply -f k8s/elasticsearch/"
+                sh "kubectl rollout status deployment/elasticsearch -n metro --timeout=120s || true"
+                
+                // Deploy Registry (Eureka) - critical for service discovery
+                echo "Deploying Registry (Eureka)..."
                 sh "kubectl apply -f k8s/registry/"
+                sh "kubectl rollout status deployment/registry -n metro --timeout=120s || true"
                 
                 // Deploy Ingress for routing
                 sh "kubectl apply -f k8s/ingress.yaml"
                 
-                // Wait for critical infrastructure to be ready
-                echo "Waiting for infrastructure to be ready..."
+                // ============================================
+                // PHASE 2: Verify all infrastructure is ready
+                // ============================================
+                echo "Verifying infrastructure is ready..."
                 sh """
-                    kubectl rollout status deployment/redis -n metro --timeout=120s || true
-                    kubectl rollout status deployment/postgres -n metro --timeout=120s || true
-                    kubectl rollout status deployment/registry -n metro --timeout=120s || true
+                    echo "Checking Redis..."
+                    kubectl get pods -n metro -l app=redis
+                    echo "Checking Zookeeper..."
+                    kubectl get pods -n metro -l app=zookeeper
+                    echo "Checking Kafka..."
+                    kubectl get pods -n metro -l app=kafka
+                    echo "Checking Registry..."
+                    kubectl get pods -n metro -l app=registry
+                    echo "Checking Postgres..."
+                    kubectl get pods -n metro | grep metro-db || true
                 """
                 
                 echo "Infrastructure deployment complete"
@@ -179,7 +225,7 @@ pipeline {
             steps {
                 echo "Deploying Registry service to Kubernetes..."
                 sh "kubectl config use-context minikube || echo 'Using current context'"
-                sh "sed -i 's|registry_microservice:latest|${DOCKERHUB_CREDS_USR}/registry_microservice:latest|g' k8s/registry/registry-deployment.yaml || true"
+                sh "sed -i 's|registry_microservice:latest|${DOCKERHUB_CREDS_USR}/registry_microservice:latest|g' k8s/registry/registry-deployment.yml || true"
                 sh "kubectl apply -f k8s/registry/"
                 sh "kubectl rollout status deployment/registry -n metro --timeout=180s || true"
                 echo "Registry service deployed"
