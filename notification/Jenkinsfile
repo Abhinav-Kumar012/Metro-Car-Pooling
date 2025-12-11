@@ -23,6 +23,8 @@ pipeline {
 
         stage('Build') {
             steps {
+                echo "Cleaning Lombok from local Maven repository to force fresh download..."
+                sh "rm -rf ~/.m2/repository/org/projectlombok"
                 echo "Building notification with Maven..."
                 sh "mvn -f notification/pom.xml clean package -DskipTests"
             }
