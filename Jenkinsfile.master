@@ -95,6 +95,13 @@ pipeline {
             }
         }
 
+        stage('Setup Environment') {
+            steps {
+                echo "Cleaning Lombok from local Maven repository to force fresh download..."
+                sh "rm -rf ~/.m2/repository/org/projectlombok"
+            }
+        }
+
         stage('Build Contracts') {
             when {
                 expression {
@@ -237,14 +244,7 @@ pipeline {
             }
         }
 
-        stage('Debug Matching Build') {
-            steps {
-                echo "DEBUGGING MATCHING MODULE DEPENDENCIES..."
-                sh "mvn -f matching/pom.xml dependency:tree -Dverbose -Dincludes=org.projectlombok:lombok"
-                sh "mvn -f matching/pom.xml help:effective-pom -Dverbose >> effective-pom-matching.xml"
-                sh "cat effective-pom-matching.xml | grep -A 20 maven-compiler-plugin"
-            }
-        }
+
 
         stage('Trigger Service Pipelines') {
             when {
