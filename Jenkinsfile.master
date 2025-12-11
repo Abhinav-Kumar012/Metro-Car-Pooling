@@ -12,7 +12,8 @@ pipeline {
         DOCKERHUB_CREDS = credentials('dockerhub-creds')
         EMAIL_IDS_TO_SEND = ""
         GIT_REPO = 'https://github.com/valmikGit/Metro-Car-Pooling.git'
-        KUBECONFIG = '/var/lib/jenkins/.kube/config'
+        // KUBECONFIG = '/var/lib/jenkins/.kube/config' (not needed for Mac)
+        KUBECONFIG = '/Users/krishdave/.kube/config'
     }
 
     triggers {
@@ -132,6 +133,10 @@ pipeline {
                 echo "Deploying infrastructure to Kubernetes (Minikube)..."
                 
                 // Ensure we're using minikube context
+                sh "whoami"
+                sh "ls -l ${KUBECONFIG}"
+                sh "echo KUBECONFIG=${KUBECONFIG}"
+                sh "kubectl config view"
                 sh "kubectl config use-context minikube || echo 'Using current context'"
                 
                 // Apply namespace first
