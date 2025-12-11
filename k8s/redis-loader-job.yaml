@@ -1,0 +1,22 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: redis-loader
+  namespace: metro
+spec:
+  template:
+    spec:
+      containers:
+      - name: redis-loader
+        image: infra-cache-loader:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: REDIS_HOST
+          # The service name for Redis in your metro-kafka.csv or similar. 
+          # You use 'redis' service in k8s/redis-deployment.yaml usually. 
+          # Checking previous steps, the redis service name is 'redis'.
+          value: "redis" 
+        - name: REDIS_PORT
+          value: "6379"
+      restartPolicy: OnFailure
+  backoffLimit: 4
