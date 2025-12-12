@@ -8,9 +8,7 @@ pipeline {
 
     environment {
         DOCKERHUB_CREDS = credentials('dockerhub-creds')
-        IMAGE_NAME = "frontend_microservice"
-        IMAGE_TAG = "latest"
-        DOCKER_IMAGE = "${DOCKERHUB_CREDS_USR}/${IMAGE_NAME}:${IMAGE_TAG}"
+        DOCKER_IMAGE = "${DOCKERHUB_CREDS_USR}/frontend_microservice:latest"
         EMAIL_IDS_TO_SEND = "vaibhav.bajoriya@iiitb.ac.in"
     }
 
@@ -42,7 +40,6 @@ pipeline {
         stage('Docker Build') {
             steps {
                 echo "Building Docker image..."
-                // Use 'frontend/' as the build context so COPY package.json works
                 sh "docker build -t ${DOCKER_IMAGE} frontend/"
             }
         }
@@ -60,8 +57,6 @@ pipeline {
                 echo "Deploying to Kubernetes (Minikube)..."
                 // Ensure we're using minikube context
                 sh "kubectl config use-context minikube || echo 'Using current context'"
-                // Update image in deployment yaml
-                sh "sed -i '' 's|frontend_microservice:latest|${DOCKER_IMAGE}|g' k8s/frontend-deployment.yaml"
                 // Apply K8s manifests
                 sh "kubectl apply -f k8s/frontend-deployment.yaml"
             }

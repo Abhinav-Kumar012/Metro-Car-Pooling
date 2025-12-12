@@ -26,14 +26,14 @@ spec:
       transaction.state.log.min.isr: 1
     resources:
       requests:
-        memory: 1Gi
+        memory: 512Mi
         cpu: "500m"
       limits:
-        memory: 1.5Gi
+        memory: 768Mi
         cpu: "1000m"
     jvmOptions:
       -Xms: 512m
-      -Xmx: 1024m
+      -Xmx: 768m
   entityOperator:
     topicOperator:
       resources:
@@ -41,7 +41,7 @@ spec:
           memory: 512Mi
           cpu: "500m"
         limits:
-          memory: 1Gi
+          memory: 768Mi
           cpu: "1000m"
       jvmOptions:
         -Xms: 256m
