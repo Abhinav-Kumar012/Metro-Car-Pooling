@@ -8,9 +8,8 @@ pipeline {
 
     environment {
         DOCKERHUB_CREDS = credentials('dockerhub-creds')
-        IMAGE_NAME = "frontend_microservice"
-        IMAGE_TAG = "latest"
-        DOCKER_IMAGE = "${DOCKERHUB_CREDS_USR}/${IMAGE_NAME}:${IMAGE_TAG}"
+        LOCAL_IMAGE = "frontend-frontend-service:latest"
+        DOCKERHUB_IMAGE = "${DOCKERHUB_CREDS_USR}/frontend_microservice:latest"
         EMAIL_IDS_TO_SEND = "vaibhav.bajoriya@iiitb.ac.in"
     }
 
@@ -41,9 +40,9 @@ pipeline {
 
         stage('Docker Build') {
             steps {
-                echo "Building Docker image..."
-                // Use 'frontend/' as the build context so COPY package.json works
-                sh "docker build -t ${DOCKER_IMAGE} frontend/"
+                echo "Building Docker image with local name..."
+                sh "docker build -t ${LOCAL_IMAGE} frontend/"
+                sh "docker tag ${LOCAL_IMAGE} ${DOCKERHUB_IMAGE}"
             }
         }
 
@@ -51,7 +50,7 @@ pipeline {
             steps {
                 echo "Pushing to DockerHub..."
                 sh "echo ${DOCKERHUB_CREDS_PSW} | docker login -u ${DOCKERHUB_CREDS_USR} --password-stdin"
-                sh "docker push ${DOCKER_IMAGE}"
+                sh "docker push ${DOCKERHUB_IMAGE}"
             }
         }
 

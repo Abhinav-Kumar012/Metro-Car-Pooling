@@ -8,9 +8,10 @@ pipeline {
 
     environment {
         DOCKERHUB_CREDS = credentials('dockerhub-creds')
-        IMAGE_NAME = "driver_microservice"
-        IMAGE_TAG = "latest"
-        DOCKER_IMAGE = "${DOCKERHUB_CREDS_USR}/${IMAGE_NAME}:${IMAGE_TAG}"
+        // Local image name matching k8s deployment and setup_cluster script
+        LOCAL_IMAGE = "driver-driver-service:latest"
+        // DockerHub image for backup push
+        DOCKERHUB_IMAGE = "${DOCKERHUB_CREDS_USR}/driver_microservice:latest"
         EMAIL_IDS_TO_SEND = "valmik.belgaonkar@iiitb.ac.in"
     }
     
@@ -39,8 +40,10 @@ pipeline {
 
         stage('Docker Build') {
             steps {
-                echo "Building Docker image..."
-                sh "docker build -f driver/Dockerfile -t ${DOCKER_IMAGE} ."
+                echo "Building Docker image with local name..."
+                sh "docker build -f driver/Dockerfile -t ${LOCAL_IMAGE} ."
+                // Also tag for DockerHub
+                sh "docker tag ${LOCAL_IMAGE} ${DOCKERHUB_IMAGE}"
             }
         }
 
@@ -48,7 +51,7 @@ pipeline {
             steps {
                 echo "Pushing to DockerHub..."
                 sh "echo ${DOCKERHUB_CREDS_PSW} | docker login -u ${DOCKERHUB_CREDS_USR} --password-stdin"
-                sh "docker push ${DOCKER_IMAGE}"
+                sh "docker push ${DOCKERHUB_IMAGE}"
             }
         }
 

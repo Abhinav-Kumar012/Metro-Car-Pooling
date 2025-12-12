@@ -8,9 +8,8 @@ pipeline {
 
     environment {
         DOCKERHUB_CREDS = credentials('dockerhub-creds')
-        IMAGE_NAME = "gateway_microservice"
-        IMAGE_TAG = "latest"
-        DOCKER_IMAGE = "${DOCKERHUB_CREDS_USR}/${IMAGE_NAME}:${IMAGE_TAG}"
+        LOCAL_IMAGE = "gateway-gateway:latest"
+        DOCKERHUB_IMAGE = "${DOCKERHUB_CREDS_USR}/gateway_microservice:latest"
         EMAIL_IDS_TO_SEND = "valmik.belgaonkar@iiitb.ac.in"
     }
 
@@ -39,8 +38,9 @@ pipeline {
 
         stage('Docker Build') {
             steps {
-                echo "Building Docker image..."
-                sh "docker build -f gateway/Dockerfile -t ${DOCKER_IMAGE} ."
+                echo "Building Docker image with local name..."
+                sh "docker build -f gateway/Dockerfile -t ${LOCAL_IMAGE} ."
+                sh "docker tag ${LOCAL_IMAGE} ${DOCKERHUB_IMAGE}"
             }
         }
 
@@ -48,7 +48,7 @@ pipeline {
             steps {
                 echo "Pushing to DockerHub..."
                 sh "echo ${DOCKERHUB_CREDS_PSW} | docker login -u ${DOCKERHUB_CREDS_USR} --password-stdin"
-                sh "docker push ${DOCKER_IMAGE}"
+                sh "docker push ${DOCKERHUB_IMAGE}"
             }
         }
 
