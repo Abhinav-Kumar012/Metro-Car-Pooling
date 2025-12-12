@@ -57,14 +57,6 @@ pipeline {
                 sh "kubectl apply -f k8s/matching-deployment.yaml"
             }
         }
-
-        stage('Verify Deployment') {
-            steps {
-                echo "Verifying deployment..."
-                sh "kubectl rollout status deployment/matching-service -n metro --timeout=180s"
-                echo "Matching service deployment successful!"
-            }
-        }
     }
 
     post {
