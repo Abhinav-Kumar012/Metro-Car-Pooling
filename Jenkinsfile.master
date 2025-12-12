@@ -12,8 +12,7 @@ pipeline {
         DOCKERHUB_CREDS = credentials('dockerhub-creds')
         EMAIL_IDS_TO_SEND = ""
         GIT_REPO = 'https://github.com/valmikGit/Metro-Car-Pooling.git'
-        // KUBECONFIG = '/var/lib/jenkins/.kube/config' (not needed for Mac)
-        KUBECONFIG = '/Users/krishdave/.kube/config'
+        KUBECONFIG = '/var/lib/jenkins/.kube/config'
     }
 
     triggers {
@@ -94,13 +93,13 @@ pipeline {
                 }
             }
         }
-
-        stage('Setup Environment') {
-            steps {
-                echo "Cleaning Lombok from local Maven repository to force fresh download..."
-                sh "rm -rf ~/.m2/repository/org/projectlombok"
-            }
-        }
+        
+        // stage('Setup Environment') {
+        //     steps {
+        //         echo "Cleaning Lombok from local Maven repository to force fresh download..."
+        //         sh "rm -rf ~/.m2/repository/org/projectlombok"
+        //     }
+        // }
 
         stage('Build Contracts') {
             when {
