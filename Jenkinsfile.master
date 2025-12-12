@@ -12,7 +12,8 @@ pipeline {
         DOCKERHUB_CREDS = credentials('dockerhub-creds')
         EMAIL_IDS_TO_SEND = ""
         GIT_REPO = 'https://github.com/valmikGit/Metro-Car-Pooling.git'
-        KUBECONFIG = '/var/lib/jenkins/.kube/config'
+        // KUBECONFIG = '/var/lib/jenkins/.kube/config' (not needed for Mac)
+        KUBECONFIG = '/Users/krishdave/.kube/config'
     }
 
     triggers {
@@ -94,6 +95,13 @@ pipeline {
             }
         }
 
+        stage('Setup Environment') {
+            steps {
+                echo "Cleaning Lombok from local Maven repository to force fresh download..."
+                sh "rm -rf ~/.m2/repository/org/projectlombok"
+            }
+        }
+
         stage('Build Contracts') {
             when {
                 expression {
@@ -132,6 +140,10 @@ pipeline {
                 echo "Deploying infrastructure to Kubernetes (Minikube)..."
                 
                 // Ensure we're using minikube context
+                sh "whoami"
+                sh "ls -l ${KUBECONFIG}"
+                sh "echo KUBECONFIG=${KUBECONFIG}"
+                sh "kubectl config view"
                 sh "kubectl config use-context minikube || echo 'Using current context'"
                 
                 // Apply namespace first
@@ -169,7 +181,7 @@ pipeline {
                 
                 // Deploy Postgres cluster using Zalando Operator (master-slave)
                 echo "Deploying Postgres Master-Slave cluster..."
-                sh "kubectl apply -f k8s/postgres/zalando-postgres.yaml"
+                sh "kubectl apply -f k8s/postgres/postgresql-zalando.yaml"
                 sh "sleep 20"
                 
                 // Deploy Zookeeper first (required for Kafka)
@@ -231,6 +243,8 @@ pipeline {
                 echo "Registry service deployed"
             }
         }
+
+
 
         stage('Trigger Service Pipelines') {
             when {

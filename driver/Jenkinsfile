@@ -23,6 +23,8 @@ pipeline {
 
         stage('Build') {
             steps {
+                echo "Cleaning Lombok from local Maven repository to force fresh download..."
+                sh "rm -rf ~/.m2/repository/org/projectlombok"
                 echo "Building driver with Maven..."
                 sh "mvn -f driver/pom.xml clean package -DskipTests"
             }
@@ -56,7 +58,7 @@ pipeline {
                 // Ensure we're using minikube context
                 sh "kubectl config use-context minikube || echo 'Using current context'"
                 // Update image in deployment yaml
-                sh "sed -i 's|driver_microservice:latest|${DOCKER_IMAGE}|g' k8s/driver-deployment.yaml"
+                sh "sed -i '' 's|driver_microservice:latest|${DOCKER_IMAGE}|g' k8s/driver-deployment.yaml"
                 // Apply K8s manifests
                 sh "kubectl apply -f k8s/driver-deployment.yaml"
             }
