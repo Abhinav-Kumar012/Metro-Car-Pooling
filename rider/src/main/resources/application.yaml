@@ -2,7 +2,7 @@ spring:
   application:
     name: rider
   kafka:
-    bootstrap-servers: kafka:9092
+    bootstrap-servers: metro-kafka-kafka-bootstrap:9092
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
