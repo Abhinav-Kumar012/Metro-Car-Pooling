@@ -139,13 +139,6 @@ pipeline {
             steps {
                 echo "Deploying infrastructure to Kubernetes (Minikube)..."
                 
-                // Ensure we're using minikube context
-                sh "whoami"
-                sh "ls -l ${KUBECONFIG}"
-                sh "echo KUBECONFIG=${KUBECONFIG}"
-                sh "kubectl config view"
-                sh "kubectl config use-context minikube || echo 'Using current context'"
-                
                 // Apply namespace first
                 sh "kubectl apply -f k8s/namespace.yaml || true"
                 
