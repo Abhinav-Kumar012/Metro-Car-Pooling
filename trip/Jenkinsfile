@@ -57,7 +57,7 @@ pipeline {
                 sh "kubectl apply -f k8s/trip-deployment.yaml"
             }
         }
-        // for testing
+        // testing
     }
 
     post {
