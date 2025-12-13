@@ -57,14 +57,6 @@ pipeline {
                 sh "kubectl apply -f k8s/rider-deployment.yaml"
             }
         }
-
-        // stage('Verify Deployment') {
-        //     steps {
-        //         echo "Verifying deployment..."
-        //         sh "kubectl rollout status deployment/rider-service -n metro --timeout=180s"
-        //         echo "Rider service deployment successful!"
-        //     }
-        // }
     }
 
     post {
