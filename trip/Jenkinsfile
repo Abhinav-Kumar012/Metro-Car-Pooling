@@ -9,7 +9,7 @@ pipeline {
     environment {
         DOCKERHUB_CREDS = credentials('dockerhub-creds')
         DOCKER_IMAGE = "${DOCKERHUB_CREDS_USR}/trip_microservice:latest"
-        EMAIL_IDS_TO_SEND = ""
+        EMAIL_IDS_TO_SEND = "work.abhinav.work@gmail.com"
     }
 
     stages {
@@ -57,46 +57,39 @@ pipeline {
                 sh "kubectl apply -f k8s/trip-deployment.yaml"
             }
         }
-
-        stage('Verify Deployment') {
-            steps {
-                echo "Verifying deployment..."
-                sh "kubectl rollout status deployment/trip-service -n metro --timeout=180s"
-                echo "Trip service deployment successful!"
-            }
-        }
+        // test
     }
 
     post {
         success {
             echo "Successfully executed the trip pipeline"
-            // emailext(
-            //     to: "${EMAIL_IDS_TO_SEND}",
-            //     subject: "SUCCESS: Trip Pipeline #${env.BUILD_NUMBER}",
-            //     body: """
-            //     <b>Build successful!</b><br>
-            //     Job: ${env.JOB_NAME}<br>
-            //     Build Number: ${env.BUILD_NUMBER}<br>
-            //     Triggered By: ${params.TRIGGERED_BY}<br>
-            //     URL: <a href="${env.BUILD_URL}">${env.BUILD_URL}</a>
-            //     """,
-            //     mimeType: 'text/html'
-            // )
+            emailext(
+                to: "${EMAIL_IDS_TO_SEND}",
+                subject: "SUCCESS: Trip Pipeline #${env.BUILD_NUMBER}",
+                body: """
+                <b>Build successful!</b><br>
+                Job: ${env.JOB_NAME}<br>
+                Build Number: ${env.BUILD_NUMBER}<br>
+                Triggered By: ${params.TRIGGERED_BY}<br>
+                URL: <a href="${env.BUILD_URL}">${env.BUILD_URL}</a>
+                """,
+                mimeType: 'text/html'
+            )
         }
         failure {
             echo "Failed to execute the trip pipeline"
-            // emailext(
-            //     to: "${EMAIL_IDS_TO_SEND}",
-            //     subject: "FAILURE: Trip Pipeline #${env.BUILD_NUMBER}",
-            //     body: """
-            //     <b>Build failed!</b><br>
-            //     Job: ${env.JOB_NAME}<br>
-            //     Build Number: ${env.BUILD_NUMBER}<br>
-            //     Triggered By: ${params.TRIGGERED_BY}<br>
-            //     URL: <a href="${env.BUILD_URL}">${env.BUILD_URL}</a>
-            //     """,
-            //     mimeType: 'text/html'
-            // )
+            emailext(
+                to: "${EMAIL_IDS_TO_SEND}",
+                subject: "FAILURE: Trip Pipeline #${env.BUILD_NUMBER}",
+                body: """
+                <b>Build failed!</b><br>
+                Job: ${env.JOB_NAME}<br>
+                Build Number: ${env.BUILD_NUMBER}<br>
+                Triggered By: ${params.TRIGGERED_BY}<br>
+                URL: <a href="${env.BUILD_URL}">${env.BUILD_URL}</a>
+                """,
+                mimeType: 'text/html'
+            )
         }
         cleanup {
             cleanWs()
