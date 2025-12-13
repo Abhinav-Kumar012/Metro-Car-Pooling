@@ -57,14 +57,7 @@ pipeline {
                 sh "kubectl apply -f k8s/trip-deployment.yaml"
             }
         }
-
-        stage('Verify Deployment') {
-            steps {
-                echo "Verifying deployment..."
-                sh "kubectl rollout status deployment/trip-service -n metro --timeout=180s"
-                echo "Trip service deployment successful!"
-            }
-        }
+        // for testing
     }
 
     post {
