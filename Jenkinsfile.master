@@ -12,8 +12,8 @@ pipeline {
         DOCKERHUB_CREDS = credentials('dockerhub-creds')
         EMAIL_IDS_TO_SEND = ""
         GIT_REPO = 'https://github.com/valmikGit/Metro-Car-Pooling.git'
-        KUBECONFIG = '/var/lib/jenkins/.kube/config'
-        // KUBECONFIG = '/Users/krishdave/.kube/config'
+        // KUBECONFIG = '/var/lib/jenkins/.kube/config'
+        KUBECONFIG = '/Users/krishdave/.kube/config'
     }
 
     triggers {
