@@ -210,6 +210,14 @@ pipeline {
                 // Deploy Ingress
                 echo "Deploying Ingress..."
                 sh "kubectl apply -f k8s/ingress.yaml"
+
+                // Deploy Kibana
+                echo "Deploying Kibana..."
+                sh "kubectl apply -f k8s/kibana/ || true"
+
+                // Deploy HPA
+                echo "Deploying HPA..."
+                sh "kubectl apply -f k8s/hpa.yaml || true"
                 
                 // Build and deploy Redis cache loader for map data
                 echo "Building Redis cache loader..."

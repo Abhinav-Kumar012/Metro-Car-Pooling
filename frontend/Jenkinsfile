@@ -59,6 +59,7 @@ pipeline {
                 sh "kubectl config use-context minikube || echo 'Using current context'"
                 // Apply K8s manifests
                 sh "kubectl apply -f k8s/frontend-deployment.yaml"
+                sh "kubectl rollout restart deployment/frontend-service -n metro"
             }
         }
 

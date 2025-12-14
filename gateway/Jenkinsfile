@@ -55,6 +55,7 @@ pipeline {
                 echo "Deploying to Kubernetes (Minikube)..."
                 sh "kubectl config use-context minikube || echo 'Using current context'"
                 sh "kubectl apply -f k8s/gateway-deployment.yaml"
+                sh "kubectl rollout restart deployment/gateway-service -n metro"
             }
         }
 
