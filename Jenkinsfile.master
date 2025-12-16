@@ -12,8 +12,8 @@ pipeline {
         DOCKERHUB_CREDS = credentials('dockerhub-creds')
         EMAIL_IDS_TO_SEND = ""
         GIT_REPO = 'https://github.com/valmikGit/Metro-Car-Pooling.git'
-        KUBECONFIG = '/var/lib/jenkins/.kube/config'
-        // KUBECONFIG = '/Users/krishdave/.kube/config'
+        // KUBECONFIG = '/var/lib/jenkins/.kube/config'
+        KUBECONFIG = '/Users/krishdave/.kube/config'
     }
 
     triggers {
@@ -210,6 +210,14 @@ pipeline {
                 // Deploy Ingress
                 echo "Deploying Ingress..."
                 sh "kubectl apply -f k8s/ingress.yaml"
+
+                // Deploy Kibana
+                echo "Deploying Kibana..."
+                sh "kubectl apply -f k8s/kibana/ || true"
+
+                // Deploy HPA
+                echo "Deploying HPA..."
+                sh "kubectl apply -f k8s/hpa.yaml || true"
                 
                 // Build and deploy Redis cache loader for map data
                 echo "Building Redis cache loader..."
